@@ -1,287 +1,201 @@
 # AI 行业情报系统设计
 
-> 状态：A1 已部署运行（Docker 本地），A2（X Hosted MCP）因付费已放弃。  
-> 外部依赖最后核验：2026-07-03。  
-> 目标：用 TrendRadar 做广覆盖采集 + Nitter RSS 补充 X 内容，输出有结论的中文日报。
+> 状态：A1 TrendRadar 已通过本地 Docker 运行，当前处于报告质量验证阶段。
+>
+> 活动架构最后核对：2026-07-03。
+>
+> 目标：从多类公开信息源采集 AI 行业动态，经相关性过滤、中文分析后生成高信噪比 HTML 日报。
 
 ## 一、设计结论
 
-系统需要区分两个概念：
+项目只保留一条活动管道：**A1 TrendRadar**。TrendRadar 负责采集、SQLite 存储、过滤、翻译、AI 分析和 HTML 报告。
 
-- **数据通道**决定从哪里获取数据：A1 为 TrendRadar，A2 为 X Hosted MCP。
-- **处理方案**决定如何过滤和分析数据：Version A 使用通道原生规则，Version B 使用统一规则。
+X Hosted MCP 因 Pay-per-use 成本已退出活动架构。完整接入说明保留在 [`docs/archive/x-hosted-mcp-setup.md`](docs/archive/x-hosted-mcp-setup.md)，仅用于未来重新评估；恢复前必须重新确认费用、OAuth 权限和官方接口。
 
-不能把 A1/A2 当成 Version A/B。A1 与 A2 数据源不同，适合比较覆盖能力；Version A 与 B 必须处理同一份原始数据，才适合比较过滤和分析质量。
+当前需要验证的不是不同数据通道，而是同一批 A1 原始数据上的两种过滤方法：
+
+- **Variant K**：关键词过滤，可解释、免费、维护成本低。
+- **Variant AI**：TrendRadar 内置 AI 过滤，语义能力更强但有模型成本和稳定性风险。
+
+实验采用精确率优先策略。未经同一快照和人工标注验证，不得因单次日报观感切换生产过滤方式。
+
+## 二、活动架构
 
 ```text
-TrendRadar（A1） ─┐
-                  ├─> 标准化记录 ─> 过滤/分类 ─> 中文分析 ─> 日报
-X Hosted MCP（A2）┘
-
-处理方案 A：A1、A2 使用各自适配的规则
-处理方案 B：对同一份标准化记录使用统一规则
+中文热榜 ──────────────────────┐
+X 账号 Nitter RSS（best effort）├─> TrendRadar 采集
+GitHub Trending / agents-radar ┤       ↓
+HuggingFace Papers             ┤   SQLite 原始数据
+GitHub Releases Atom ──────────┘       ↓
+                                  相关性过滤
+                              Variant K | Variant AI
+                                      ↓
+                                翻译 + AI 分析
+                                      ↓
+                                  本地 HTML 日报
 ```
 
-## 二、系统边界
+### 2.1 数据源职责
 
-### 2.1 数据通道
-
-| 通道 | 负责内容 | 优势 | 边界 |
+| 来源 | 负责内容 | 优势 | 已知边界 |
 |---|---|---|---|
-| A1 TrendRadar | 11 中文热榜 + 35 RSS 源 | 广覆盖、免费、调度/翻译/分析完整 | X 经 Nitter RSS 接入，无互动指标 |
-| A2 X Hosted MCP | ❌ 已放弃 | — | X API 需 Pay-per-use 付费，用户拒绝 |
+| 中文热榜 | 国内新闻、政策、产业和社会热点 | 覆盖广、更新快 | 依赖公共 NewsNow 实例，单个平台可能暂时失败 |
+| Nitter RSS | `config/x-accounts.json` 中的 X 账号 | 免费、正文可进入 RSS 摘要 | Nitter 不稳定；无官方互动指标；单账号可能 404 |
+| GitHub Trending RSS | 新项目发现 | 免费、更新频繁 | TrendRadar 当前不保存 feed 的自定义 `stars/addStars` 字段 |
+| agents-radar | AI 仓库日报 | 已做上游聚合 | 颗粒度受上游日报格式限制 |
+| HuggingFace Papers | AI 论文发现 | 有标题、摘要和 upvotes | 当前关键词过滤只检查标题，可能漏掉仅在摘要体现相关性的论文 |
+| GitHub Releases Atom | 重点项目版本发布 | 官方 feed、稳定 | 版本标题可能不含 AI 关键词，当前 K 方案可能漏报 |
 
-X 账号的唯一数据源是 [`config/x-accounts.json`](config/x-accounts.json)。文档不再复制完整账号清单，也不手写固定账号总数。
+GitHub 星数、增长速度和 commit 频率尚未形成可靠能力；相关需求继续保留在 [`docs/requirements.md`](docs/requirements.md)，不在本轮架构收敛中补实现。
 
 ### 2.2 收录边界
 
 收录：
 
-- 模型、产品、Agent、开发工具、论文、开源项目和行业趋势。
-- 算力、芯片、融资、财报、监管和地缘政治中，能明确说明其对 AI 供给、成本、竞争或合规影响的内容。
+- 模型、AI 产品、Agent、开发工具、论文、开源项目和行业趋势。
+- 算力、芯片、融资、财报、监管和地缘政治中，能够说明其对 AI 供给、成本、竞争或合规影响的内容。
 
 排除：
 
 - 与 AI 无关的政治、生活、娱乐、股票喊单和加密货币内容。
 - 只有宽泛词命中、无法证明与 AI 相关的内容。
-- 纯转发、重复内容、无新增信息的营销文案。
+- 纯转发、重复内容和无新增信息的营销文案。
 
-## 三、Version A：通道原生处理
+## 三、运行基线
 
-### 3.1 A1：TrendRadar
+### 3.1 配置来源
 
-TrendRadar 当前上游已经支持：
+- 账号源：`config/x-accounts.json`。
+- 受控关键词快照：`config/trendradar/frequency_words.txt`。
+- 受控 RSS 快照：`config/trendradar/rss-feeds.yaml`。
+- 实际运行配置：相邻 TrendRadar fork 的 `config/config.yaml`、`config/frequency_words.txt` 和 `config/timeline.yaml`。
 
-- `config/config.yaml` 2.x 结构；RSS 字段为 `rss.feeds`，不是旧版 `rss.sources`。
-- `config/timeline.yaml` 调度系统。
-- `filter.method: keyword | ai` 两种筛选方式。
-- `config/frequency_words.txt` 的 `[GLOBAL_FILTER]`、`[WORD_GROUPS]`、正则、必须词和组内排除词。
+受控快照和实际运行配置并非自动同步。修改任一方后必须显式对比，并运行 `bash quality-check.sh --trendradar`；质量检查通过不等于所有外部 feed 均可用。
 
-本项目先使用 `keyword` 方案建立可解释基线，再决定是否启用 TrendRadar 自带的 AI 筛选：
+### 3.2 Variant K：关键词过滤
 
-```yaml
-app:
-  timezone: "Asia/Taipei"
+Variant K 使用当前生产 `frequency_words.txt`：
 
-schedule:
-  enabled: true
-  preset: "morning_evening"
+- 文件必须按 `[GLOBAL_FILTER]` → `[WORD_GROUPS]` → 各词组排列。
+- 短英文词必须使用单词边界正则，例如 `/\bAI\b/i`。
+- 硬件、经济和政策词使用 AI 上下文必须词，避免单独收录普通产业新闻。
+- `@N` 只限制单个词组显示数量，不代表数据抓取上限。
 
-filter:
-  method: "keyword"
+Variant K 是当前生产基线。实验完成前，生产环境继续使用 `filter.method=keyword`。
 
-report:
-  display_mode: "keyword"
-  max_news_per_keyword: 5
+### 3.3 Variant AI：AI 过滤
 
-ai_analysis:
-  enabled: true
-  language: "Chinese"
-  include_rss: true
+Variant AI 使用 TrendRadar 内置 `filter.method=ai`。正式实验时必须冻结：
 
-ai_translation:
-  enabled: true
-  language: "中文"
-  scope:
-    hotlist: false
-    rss: true
-    standalone: true
-```
+- `ai_interests.txt` 的完整内容及 SHA-256。
+- 模型提供商、模型名和版本。
+- 分类 Prompt 文件及 SHA-256。
+- `min_score`、temperature、批大小和重试配置。
+- 运行时间、输入快照 ID、token 用量和估算费用。
 
-`frequency_words.txt` 格式为 `[GLOBAL_FILTER]` → `[WORD_GROUPS]` → 各 `[组别名]`。`[WORD_GROUPS]` 标记不可省略，否则词组区域不会被解析。短英文词必须用 `/\bword\b/i` 正则加词边界，纯文本 `AI` 会误命中 maintain、available 等含 "ai" 子串的词：
+本轮只定义实验，不创建 AI 配置、不调用模型、不修改生产过滤方式。
+
+## 四、K/AI 离线实验
+
+### 4.1 实验目的
+
+只回答一个问题：在相同原始数据上，AI 过滤能否以可接受成本显著提高日报精确率或减少人工复核。
+
+下游翻译、AI 行业分析和日报格式不属于变量，两个变体必须保持一致。
+
+### 4.2 输入快照
+
+1. 连续积累 7 个完整自然日的数据。
+2. 每日结束后冻结对应的 `output/news/YYYY-MM-DD.db` 和 `output/rss/YYYY-MM-DD.db`。
+3. 实验只读取副本，不修改生产数据库，也不重新采集。
+4. 记录每个文件的 SHA-256；任一哈希变化都使该次实验失效。
+
+稳定记录 ID：
+
+- RSS：`rss:<feed_id>:<guid>`；无 GUID 时使用规范化 URL 的 SHA-256。
+- 热榜：`hotlist:<source_id>:<normalized_title_sha256>`。
+
+### 4.3 人工基准集
+
+从冻结快照中建立不少于 300 条的人工标注集：
+
+- 按中文热榜、Nitter、GitHub、论文和 Release 分层抽样。
+- 补充硬件、政治、生活、股票和加密货币类困难负样本。
+- 加入人工维护的“重要事件集合”：模型发布、重大产品、关键硬件和监管事件。
+- 标注字段为 `record_id`、来源、正文或标题、`keep/drop`、内容类别、是否重要事件、判定理由。
+
+标注在执行 K/AI 之前完成，标注人员不得先看到任一变体结果。
+
+### 4.4 实验执行
+
+对同一组 `record_id` 分别运行：
+
+1. Variant K：加载冻结版本的 `frequency_words.txt`，记录命中词组和 `keep/drop`。
+2. Variant AI：加载冻结的兴趣描述、Prompt 和模型参数，记录相关性分数、类别、理由和 `keep/review/drop`。
+3. `review` 计入人工复核量；计算精确率时不视为自动保留。
+4. 两组结果写入同一个实验目录，不覆盖原始快照。
+
+未来实验产物目录：
 
 ```text
-[GLOBAL_FILTER]
-广告
-促销
-抽奖
-带货
-
-[WORD_GROUPS]
-
-[AI 核心]
-/\b(?:AI|AGI|LLM|GPT|ChatGPT|Claude|Gemini|Grok)\b/i
-/\b(?:OpenAI|Anthropic|DeepMind|xAI|DeepSeek|Llama|Mistral)\b/i
-大模型
-大语言模型
-智能体
-生成式人工智能
-@20
-
-[算力与硬件]
-+/\b(?:AI|LLM|training|inference)\b/i
-/\b(?:GPU|CPU|TPU|NPU|HBM|NVIDIA|AMD|Blackwell|Hopper|Rubin)\b/i
-芯片
-半导体
-算力
-数据中心
-@10
-
-[AI 经济与政策]
-+/\bAI\b/i
-融资
-估值
-收购
-财报
-监管
-法案
-出口管制
-@10
-
-[论文与研究]
-/\b(?:arXiv|ICML|NeurIPS|ICLR|RLHF|RAG|benchmark|reasoning)\b/i
-论文
-研究
-推理
-对齐
-微调
-@10
-
-[开发工具与开源]
-/\b(?:Cursor|MCP|LangChain|function calling|tool use|open source)\b/i
-AI 编程
-开源模型
-@10
+output/experiments/filter-ab/<run_id>/
+├── manifest.json       # 日期范围、哈希、配置和模型版本
+├── labels.jsonl        # 人工基准集
+├── variant-k.jsonl     # 关键词结果和命中规则
+├── variant-ai.jsonl    # AI 结果、分数、理由和成本
+└── report.md           # 指标、重要事件漏报和结论
 ```
 
-> 上述配置是项目基线，不替代 TrendRadar 上游完整示例。如果上游配置版本变化，先按上游迁移说明更新，再应用本项目差异。
+### 4.5 指标
 
-#### 从账号配置派生 RSS feeds
+| 指标 | 定义 |
+|---|---|
+| 精确率 | 正确保留数 / 自动保留总数 |
+| 召回率 | 正确保留数 / 人工标注应保留总数 |
+| 噪音率 | 错误保留数 / 自动保留总数 |
+| 分类准确率 | 分类正确数 / 正确保留数 |
+| 人工复核率 | `review` 数 / 全部输入数 |
+| 重要事件漏报 | 重要事件集合中未自动保留的条数 |
+| 模型成本 | 输入/输出 token、调用次数和估算费用 |
 
-Nitter RSS URL 规则为 `https://nitter.net/<handle>/rss`。派生命令：
+### 4.6 胜负规则
+
+1. 精确率低于 90% 的方案直接淘汰。
+2. 重要事件漏报必须为 0；否则不得成为生产方案。
+3. 满足门槛后，选择精确率更高者。
+4. 精确率差距小于 3 个百分点时，选择人工复核量和运行成本更低者。
+5. Variant AI 只有在精确率至少提升 5 个百分点，或显著减少人工复核时，才替换 Variant K。
+6. 不用主观 1–5 分代替以上指标。
+
+## 五、运行与变更边界
+
+当前允许的只读检查：
 
 ```bash
-jq -r '
-  .groups[].accounts[]
-  | "    - id: \"nitter-\(.handle | ascii_downcase)\"\n      name: \"X @\(.handle)\"\n      url: \"https://nitter.net/\(.handle)/rss\""
-' config/x-accounts.json
+docker ps --filter name=trendradar
+docker logs trendradar --tail 30
+bash quality-check.sh --trendradar
 ```
 
-把输出追加到 TrendRadar `config/config.yaml` 的 `rss.feeds` 下。不要覆盖上游的 `rss.enabled` 和 `freshness_filter` 配置。Nitter 不稳定，切换数据源时同步更新 `config/trendradar/rss-feeds.yaml` 和 `AGENTS.md` 的 URL 规则。
+以下操作必须单独取得老板确认：
 
-### 3.2 A2：X Hosted MCP
+- 修改相邻 TrendRadar fork 的运行配置。
+- 重启 `trendradar` 或 `trendradar-mcp` 容器。
+- 创建 AI 过滤配置或调用付费模型。
+- 恢复 X Hosted MCP、OAuth 或购买 X API credits。
+- 配置或发送飞书通知。
 
-A2 的接入和执行步骤见 [`x-hosted-mcp-setup.md`](x-hosted-mcp-setup.md)。处理顺序固定为：
+## 六、当前阶段验收
 
-1. 使用明确的 UTC 半开时间窗 `[start_time, end_time)` 抓取。
-2. 使用 Post ID 去重，查询阶段排除 retweet。
-3. 先做确定性过滤，再把边界内容送入人工或 AI 复核。
-4. 分类后按内容类别排序和截断。
-5. 输出 `raw.json`、`processed.json` 和 `digest.md`。
+- 活动架构只有 A1 TrendRadar，A2 仅存在于归档。
+- 生产继续使用 Variant K，不因文档变更改变运行行为。
+- K/AI 实验使用同一 SQLite 快照、稳定 ID 和人工基准集。
+- GitHub 指标能力缺口被明确记录，不把“RSS 已接入”等同于“需求已满足”。
+- 文档变更不修改 TrendRadar、Docker、RSS 源、关键词和账号清单。
 
-Version A 的过滤分三档：
-
-| 档位 | 规则 | 结果 |
-|---|---|---|
-| 强相关 | 明确命中模型、公司、技术或 AI 产品专名 | 保留 |
-| 条件相关 | 硬件、经济、政策词与 AI 上下文同时出现 | 保留或复核 |
-| 弱相关 | `model`、`release`、`update`、`研究`、`发布`等宽泛词单独出现 | 复核，不得直接保留 |
-
-账号中 `review_policy=strict` 的条目还必须满足对应 `review_note`，否则丢弃。
-
-## 四、Version B：统一处理方案
-
-Version B 第一阶段只用于处理 A2 的同一份 `raw.json`，避免数据源差异污染实验。胜出后再评估是否接入 A1 标准化数据。
-
-统一分析输入至少包含：Post ID、作者、正文、发布时间、互动指标、原文链接。输出必须是可解析 JSON：
-
-```json
-{
-  "post_id": "string",
-  "relevance": "keep | review | drop",
-  "relevance_reason": "string",
-  "category": "model | hardware | economy | policy | research | product | open_source | trend | zh_cn",
-  "summary_zh": "不超过50字",
-  "impact_zh": "不超过100字；说明对AI行业的具体影响",
-  "importance": "milestone | watch | signal | reference"
-}
-```
-
-判断要求：
-
-- 不允许仅因作者属于 AI 圈就判定相关。
-- 硬件、经济和政治内容必须给出 AI 影响链路；无法说明则 `drop` 或 `review`。
-- 摘要不得添加原文没有的事实。
-- `relevance_reason` 必须引用正文中的具体证据，而不是泛泛评价。
-
-## 五、标准化输出契约
-
-每次 X 运行创建独立目录：
-
-```text
-output/x/YYYY-MM-DD/
-├── raw.json        # 原始 API 响应标准化结果，不做内容改写
-├── processed.json  # 去重、判定、分类、翻译和分析结果
-└── digest.md       # 最终中文日报
-```
-
-三份文件必须共享 `run_id` 和 Post ID。`raw.json` 至少保存：
-
-- `schema_version`、`run_id`、`fetched_at`。
-- `window.start_time`、`window.end_time`、`window.timezone`。
-- 实际查询、账号快照、分页是否完整、错误列表。
-- 每条 Post 的 `id`、`author_handle`、`text`、`created_at`、`url`、`lang` 和互动指标快照。
-
-`processed.json` 额外保存：
-
-- `decision`：`keep | review | drop`。
-- `decision_reason`、`matched_rules`、`category`。
-- 中文摘要、影响判断和重要性标签。
-- 使用的处理方案、Prompt 版本和模型名。
-
-## 六、实验设计
-
-### 6.1 实验 S：数据源覆盖
-
-目的：判断 A1 与 A2 各自补充了什么，不评价处理方案优劣。
-
-- 连续运行至少 7 天。
-- 将同一事件跨来源归并为一个事件簇。
-- 记录 A1 独有、A2 独有、两者共有的事件数。
-- 单独检查模型发布、硬件、投融资、政策和中文圈覆盖。
-
-### 6.2 实验 P：处理方案 A/B
-
-目的：比较过滤和分析方法。输入必须是同一份 A2 `raw.json`。
-
-1. 从 7 天数据中随机抽样，并补充容易误判的硬件、政治和生活内容。
-2. 人工标注 `keep/drop`、类别和重要性，形成基准集。
-3. Version A 与 B 独立处理相同样本。
-4. 按以下指标计算，不用主观 1–5 分替代：
-
-| 指标 | 计算方式 |
-|---|---|
-| 精确率 | 正确保留数 / 全部保留数 |
-| 召回率 | 正确保留数 / 基准集中应保留数 |
-| 噪音率 | 错误保留数 / 全部保留数 |
-| 分类准确率 | 分类正确数 / 正确保留数 |
-| 分析可用率 | 摘要忠实且影响链路成立的条数 / 正确保留数 |
-| 维护成本 | 每周规则修改次数、人工复核条数和模型成本 |
-
-最终方案优先满足精确率和分析可用率，再比较召回率与维护成本。A/B 差异不显著时，选择规则更少、成本更低的方案。
-
-## 七、实施顺序与验收
-
-1. 配置并验证 TrendRadar A1，只确认采集、存储和本地报告，不直接开启外部推送。
-2. 按操作手册接入 X Hosted MCP，先跑单账号、短时间窗、只读测试。
-3. 经老板确认成本后，运行全部账号并生成三份本地文件。
-4. 连续积累 7 天数据，执行实验 S 和实验 P。
-5. 选定处理方案后，再单独确认是否接入飞书推送或生产调度。
-
-验收条件：
-
-- 账号配置 JSON 合法、handle 无重复。
-- A1 使用当前 TrendRadar 字段，无 `rss.sources` 等旧配置。
-- A2 时间窗、分页状态、错误和成本边界可追溯。
-- A/B 使用同一 `raw.json`，人工基准集可复核。
-- 未经确认，不写凭据、不授权账号、不调用外部写工具、不发送消息。
-
-## 八、已核验的官方资料
+## 七、参考资料
 
 - [TrendRadar 官方仓库](https://github.com/sansan0/TrendRadar)
-- [X MCP 官方文档](https://docs.x.com/tools/mcp)
-- [xurl 官方仓库](https://github.com/xdevplatform/xurl)
-- [X 全量搜索文档](https://docs.x.com/x-api/posts/search-all-posts)
-- [X API 限流](https://docs.x.com/x-api/fundamentals/rate-limits)
-- [X API 计费](https://docs.x.com/x-api/getting-started/pricing)
-- [DeepSeek API 文档](https://api-docs.deepseek.com/)
+- [GitHub AI 追踪需求](docs/requirements.md)
+- [GitHub AI RSS 接入记录](docs/github-ai-tracking-plan.md)
+- [X Hosted MCP 历史方案](docs/archive/x-hosted-mcp-setup.md)

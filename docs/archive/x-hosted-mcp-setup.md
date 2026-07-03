@@ -1,6 +1,9 @@
 # X Hosted MCP 接入与每日 AI 情报抓取手册
 
-> **状态：❌ 已放弃。** X API 需要 Pay-per-use 付费（$5+ credits），用户拒绝。保留本文档仅供后续重新评估时参考。  
+> **状态：历史归档，非活动方案。** X API 需要 Pay-per-use，当前项目不执行本手册。只有老板重新接受费用并明确批准 OAuth 后，才能重新核验并恢复。
+>
+> 本文档保留的是 2026-07-02 的接入基线，恢复前必须重新对照官方 X MCP、xurl 和客户端文档。
+>
 > X 账号内容目前通过 Nitter RSS（`nitter.net/<handle>/rss`）免费接入 TrendRadar A1 通道。
 
 ## 目标与完成标准

@@ -67,10 +67,13 @@ jobs:
 
       - name: Check prohibited patterns
         run: |
-          ! grep -r '30 个账号' ai-intelligence-hub-design.md x-hosted-mcp-setup.md
-          ! grep -r 'since:2026-07-01' ai-intelligence-hub-design.md x-hosted-mcp-setup.md
-          ! grep -r 'v4-flash.*deepseek-chat' .
-          ! grep -r 'Pipeline [AB]' ai-intelligence-hub-design.md x-hosted-mcp-setup.md
+          ACTIVE_DOCS="AGENTS.md CLAUDE.md ai-intelligence-hub-design.md docs/requirements.md docs/github-ai-tracking-plan.md"
+          ! grep -r '30 个账号' $ACTIVE_DOCS
+          ! grep -r 'since:2026-07-01' $ACTIVE_DOCS
+          ! grep -r 'v4-flash.*deepseek-chat' $ACTIVE_DOCS
+          ! grep -r 'Pipeline [AB]' $ACTIVE_DOCS
+          test -f docs/archive/x-hosted-mcp-setup.md
+          test ! -e x-hosted-mcp-setup.md
 
       - name: Run quality-check.sh
         run: bash quality-check.sh ${{ inputs.check_trendradar && '--trendradar' || '' }}

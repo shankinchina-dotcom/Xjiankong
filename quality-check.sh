@@ -22,27 +22,29 @@ check "config/x-accounts.json JSON 合法"          jq empty config/x-accounts.j
 check "handle 无重复"                               jq -e '[.groups[].accounts[].handle] as $h | ($h|length)>0 and (($h|map(ascii_downcase)|unique|length)==($h|length))' config/x-accounts.json
 check "handle 格式合法"                             jq -e 'all(.groups[].accounts[].handle; test("^[A-Za-z0-9_]{1,15}$"))' config/x-accounts.json
 
-# 2. 禁止模式（使用 grep 替代 rg，兼容性更好）
+# 2. 活动文档禁止模式（归档文档不参与）
 echo ""
 echo "[2/5] 禁止模式"
-check "无 '30 个账号' 硬编码"                       test -z "$(grep -rl '30 个账号' ai-intelligence-hub-design.md x-hosted-mcp-setup.md 2>/dev/null || true)"
-check "无 'since:2026-07-01' 硬编码日期"            test -z "$(grep -rl 'since:2026-07-01' ai-intelligence-hub-design.md x-hosted-mcp-setup.md 2>/dev/null || true)"
-check "无 'v4-flash.*deepseek-chat' 混写"           test -z "$(grep -rl 'v4-flash' ai-intelligence-hub-design.md x-hosted-mcp-setup.md 2>/dev/null || true)"
-check "无 'Pipeline B' 术语"                        test -z "$(grep -n 'Pipeline [AB]' ai-intelligence-hub-design.md x-hosted-mcp-setup.md 2>/dev/null || true)"
-check "无 'rss.sources' 旧配置"                     test -z "$(grep -A1 'rss:' ai-intelligence-hub-design.md x-hosted-mcp-setup.md 2>/dev/null | grep 'sources:' || true)"
+ACTIVE_DOCS=(AGENTS.md CLAUDE.md ai-intelligence-hub-design.md docs/requirements.md docs/github-ai-tracking-plan.md)
+check "无 '30 个账号' 硬编码"                       test -z "$(grep -rl '30 个账号' "${ACTIVE_DOCS[@]}" 2>/dev/null || true)"
+check "无 'since:2026-07-01' 硬编码日期"            test -z "$(grep -rl 'since:2026-07-01' "${ACTIVE_DOCS[@]}" 2>/dev/null || true)"
+check "无 'v4-flash.*deepseek-chat' 混写"           test -z "$(grep -rl 'v4-flash' "${ACTIVE_DOCS[@]}" 2>/dev/null || true)"
+check "无旧 Pipeline A/B 术语"                      test -z "$(grep -n 'Pipeline [AB]' "${ACTIVE_DOCS[@]}" 2>/dev/null || true)"
+check "无 'rss.sources' 旧配置"                     test -z "$(grep -A1 'rss:' "${ACTIVE_DOCS[@]}" 2>/dev/null | grep 'sources:' || true)"
 
 # 3. 交叉引用
 echo ""
 echo "[3/5] 交叉引用"
 check "ai-intelligence-hub-design.md 存在"          test -f ai-intelligence-hub-design.md
-check "x-hosted-mcp-setup.md 存在"                  test -f x-hosted-mcp-setup.md
+check "X Hosted MCP 手册已归档"                     test -f docs/archive/x-hosted-mcp-setup.md
+check "根目录无 X Hosted MCP 执行入口"              test ! -e x-hosted-mcp-setup.md
 check "AGENTS.md 引用 config/x-accounts.json"       grep -q 'config/x-accounts.json' AGENTS.md
-check "x-hosted-mcp-setup.md 引用 accounts.json"    grep -q 'config/x-accounts.json' x-hosted-mcp-setup.md
+check "主设计引用 A2 归档手册"                       grep -q 'docs/archive/x-hosted-mcp-setup.md' ai-intelligence-hub-design.md
 
 # 4. 文档非空
 echo ""
 echo "[4/5] 文档完整性"
-for f in ai-intelligence-hub-design.md x-hosted-mcp-setup.md AGENTS.md CLAUDE.md; do
+for f in ai-intelligence-hub-design.md AGENTS.md CLAUDE.md docs/requirements.md docs/github-ai-tracking-plan.md docs/archive/x-hosted-mcp-setup.md; do
   check "$f 非空且可读" test -s "$f"
 done
 

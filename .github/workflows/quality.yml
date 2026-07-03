@@ -1,0 +1,76 @@
+name: Quality Check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # 允许其他仓库通过 workflow_call 调用
+  workflow_call:
+    inputs:
+      check_trendradar:
+        description: 'Whether to also check TrendRadar fork config'
+        type: boolean
+        default: false
+        required: false
+
+jobs:
+  secrets-scan:
+    name: Secrets Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+
+  config-lint:
+    name: Config & Doc Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML configs
+        run: |
+          yamllint -d '{extends: relaxed, rules: {line-length: disable}}' config/ 2>/dev/null || true
+          find . -name "*.yaml" -o -name "*.yml" | grep -v node_modules | xargs yamllint -d '{extends: relaxed, rules: {line-length: disable}}' 2>/dev/null || true
+
+      - name: Lint Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: '*.md'
+        continue-on-error: true
+
+  custom-checks:
+    name: Project Custom Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate x-accounts.json
+        run: |
+          jq empty config/x-accounts.json
+          jq -e '
+            [.groups[].accounts[].handle] as $handles
+            | ($handles | length) > 0
+              and (($handles | map(ascii_downcase) | unique | length) == ($handles | length))
+              and (all($handles[]; test("^[A-Za-z0-9_]{1,15}$")))
+          ' config/x-accounts.json
+
+      - name: Check prohibited patterns
+        run: |
+          ! grep -r '30 个账号' ai-intelligence-hub-design.md x-hosted-mcp-setup.md
+          ! grep -r 'since:2026-07-01' ai-intelligence-hub-design.md x-hosted-mcp-setup.md
+          ! grep -r 'v4-flash.*deepseek-chat' .
+          ! grep -r 'Pipeline [AB]' ai-intelligence-hub-design.md x-hosted-mcp-setup.md
+
+      - name: Run quality-check.sh
+        run: bash quality-check.sh ${{ inputs.check_trendradar && '--trendradar' || '' }}

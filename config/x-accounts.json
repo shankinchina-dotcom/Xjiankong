@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "last_reviewed": "2026-07-02",
+  "groups": [
+    {
+      "id": "official",
+      "name": "官方产品号",
+      "accounts": [
+        { "handle": "OpenAI", "review_policy": "normal" },
+        { "handle": "ChatGPTapp", "review_policy": "normal" },
+        { "handle": "AnthropicAI", "review_policy": "normal" },
+        { "handle": "claudeai", "review_policy": "normal" },
+        { "handle": "xai", "review_policy": "normal" },
+        { "handle": "GoogleDeepMind", "review_policy": "normal" },
+        { "handle": "AIatMeta", "review_policy": "normal" }
+      ]
+    },
+    {
+      "id": "leaders",
+      "name": "CEO 与领军人物",
+      "accounts": [
+        {
+          "handle": "sama",
+          "review_policy": "strict",
+          "review_note": "只保留 OpenAI、模型、AI 产品或 AI 研究相关内容。"
+        },
+        {
+          "handle": "elonmusk",
+          "review_policy": "strict",
+          "review_note": "只保留 xAI、Grok 或明确影响 AI 行业的内容。"
+        },
+        { "handle": "DarioAmodei", "review_policy": "normal" },
+        { "handle": "demishassabis", "review_policy": "normal" },
+        {
+          "handle": "sundarpichai",
+          "review_policy": "strict",
+          "review_note": "只保留 Gemini、DeepMind、Google AI 或明确影响 AI 行业的内容。"
+        },
+        {
+          "handle": "ylecun",
+          "review_policy": "strict",
+          "review_note": "只保留 AI 技术、研究和行业判断；政治及生活内容丢弃。"
+        }
+      ]
+    },
+    {
+      "id": "builders",
+      "name": "核心研发与产品人员",
+      "accounts": [
+        { "handle": "gdb", "review_policy": "normal" },
+        {
+          "handle": "karpathy",
+          "review_policy": "strict",
+          "review_note": "只保留 AI 技术、研究、产品和教育中的 AI 方法内容。"
+        },
+        { "handle": "bcherny", "review_policy": "normal" },
+        { "handle": "trq212", "review_policy": "normal" },
+        { "handle": "jxnlco", "review_policy": "normal" },
+        { "handle": "polynoamial", "review_policy": "normal" },
+        { "handle": "alexalbert__", "review_policy": "normal" },
+        { "handle": "OfficialLoganK", "review_policy": "normal" },
+        { "handle": "GabrielPeterss4", "review_policy": "normal" },
+        { "handle": "milichab", "review_policy": "normal" }
+      ]
+    },
+    {
+      "id": "analysts",
+      "name": "研究者、媒体与投资人",
+      "accounts": [
+        { "handle": "rowancheung", "review_policy": "normal" },
+        { "handle": "emollick", "review_policy": "normal" },
+        { "handle": "swyx", "review_policy": "normal" },
+        { "handle": "deedydas", "review_policy": "normal" },
+        { "handle": "venturetwins", "review_policy": "normal" },
+        { "handle": "AnjneyMidha", "review_policy": "normal" },
+        { "handle": "bindureddy", "review_policy": "normal" }
+      ]
+    },
+    {
+      "id": "zh_cn",
+      "name": "中文 AI 圈",
+      "accounts": [
+        { "handle": "op7418", "review_policy": "normal" },
+        { "handle": "dotey", "review_policy": "normal" },
+        { "handle": "shao__meng", "review_policy": "normal" }
+      ]
+    }
+  ]
+}

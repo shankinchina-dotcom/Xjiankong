@@ -22,6 +22,7 @@
 | `docs/requirements.md` | GitHub AI 追踪原始需求 | 需求变化先改此文件 |
 | `docs/github-ai-tracking-plan.md` | GitHub/HuggingFace/Release RSS 接入记录 | 必须区分“已接入”和“指标能力待复核” |
 | `docs/archive/` | 已放弃或暂停的历史方案 | 不作为执行入口；恢复前重新核验外部依赖 |
+| `docs/superpowers/specs/` | 已确认但尚未实施的设计规格 | 规格经老板确认后写入；实施状态必须在文档中明确标注 |
 | `config/x-accounts.json` | X 账号唯一数据源 | 账号只在此处新增、删除、改组或改审核策略 |
 | `config/trendradar/` | 同步到 TrendRadar 的受控配置快照 | 修改后对照实际 fork 并运行质量检查 |
 | `output/experiments/filter-ab/<run_id>/` | 未来 K/AI 离线实验产物 | 不作为运行配置；完成复盘并确认无保留价值后清理 |

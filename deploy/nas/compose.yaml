@@ -1,0 +1,59 @@
+name: xjiankong
+
+services:
+  trendradar:
+    image: ${TRENDRADAR_IMAGE}
+    container_name: xjiankong-trendradar
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Taipei}
+      CRON_SCHEDULE: ${CRON_SCHEDULE:-0 */4 * * *}
+      RUN_MODE: ${RUN_MODE:-cron}
+      IMMEDIATE_RUN: ${IMMEDIATE_RUN:-false}
+      AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-true}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek/deepseek-chat}
+      AI_API_BASE: ${AI_API_BASE:-}
+    volumes:
+      - ${CONFIG_DIR:-./config}:/app/config:ro
+      - ${OUTPUT_DIR:-./output}:/app/output
+    networks:
+      - backend
+
+  report-web:
+    image: ${REPORT_WEB_IMAGE}
+    container_name: xjiankong-report-web
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${OUTPUT_DIR:-./output}:/source:ro
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - backend
+
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE}
+    container_name: xjiankong-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      report-web:
+        condition: service_healthy
+    networks:
+      - backend
+
+networks:
+  backend:
+    internal: false

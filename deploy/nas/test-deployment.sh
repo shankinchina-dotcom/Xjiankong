@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/compose.yaml"
 ENV_FILE="$SCRIPT_DIR/.env.example"
 NGINX_FILE="$SCRIPT_DIR/nginx.conf"
+BUILD_BUNDLE_FILE="$SCRIPT_DIR/build-bundle.sh"
 MODE="${1:---static}"
 
 fail() {
@@ -105,6 +106,9 @@ esac
 require_nonempty "$COMPOSE_FILE"
 require_nonempty "$ENV_FILE"
 require_nonempty "$NGINX_FILE"
+require_nonempty "$BUILD_BUNDLE_FILE"
+[[ -x "$BUILD_BUNDLE_FILE" ]] || fail "not_executable:$BUILD_BUNDLE_FILE"
+bash -n "$BUILD_BUNDLE_FILE" || fail "invalid_bash:$BUILD_BUNDLE_FILE"
 
 if grep -Eq '^[[:space:]]*ports[[:space:]]*:' "$COMPOSE_FILE"; then
   fail 'compose_exposes_ports'
@@ -145,8 +149,11 @@ fi
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nas-deployment-test.XXXXXX")"
 CONFIG_DIR="$TEMP_DIR/config"
 OUTPUT_DIR="$TEMP_DIR/output"
+BUNDLE_CONFIG_DIR="$TEMP_DIR/bundle-config"
+BUNDLE_DIST_DIR="$TEMP_DIR/bundle-dist"
+BUNDLE_LOG="$TEMP_DIR/build-bundle.log"
 PROJECT_NAME="nas-deployment-test-$$"
-mkdir -p "$CONFIG_DIR" "$OUTPUT_DIR"
+mkdir -p "$CONFIG_DIR" "$OUTPUT_DIR" "$BUNDLE_CONFIG_DIR"
 
 COMPOSE=(
   env CONFIG_DIR="$CONFIG_DIR" OUTPUT_DIR="$OUTPUT_DIR"
@@ -158,6 +165,42 @@ cleanup() {
   rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
+
+cat >"$BUNDLE_CONFIG_DIR/config.yaml" <<'YAML'
+filter:
+  method: keyword
+ai:
+  api_key: ""
+YAML
+printf '%s\n' '[WORD_GROUPS]' >"$BUNDLE_CONFIG_DIR/frequency_words.txt"
+printf '%s\n' 'timeline: enabled' >"$BUNDLE_CONFIG_DIR/timeline.yaml"
+printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
+printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
+
+CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1 || fail 'bundle_safe_fixture_failed'
+[[ -d "$BUNDLE_DIST_DIR/trendradar-nas" ]] || fail 'bundle_directory_missing'
+[[ -s "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" ]] || fail 'bundle_archive_missing'
+[[ -s "$BUNDLE_DIST_DIR/trendradar-nas/config/timeline.yaml" ]] ||
+  fail 'bundle_config_incomplete'
+if find "$BUNDLE_DIST_DIR/trendradar-nas" -type f \
+  \( -name '.env' -o -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) |
+  grep -q .; then
+  fail 'bundle_contains_forbidden_file'
+fi
+if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
+  grep -Eq '(^|/)([.]env|[^/]+[.](db|sqlite|sqlite3))$'; then
+  fail 'bundle_archive_contains_forbidden_file'
+fi
+
+printf '%s\n' 'api_key: "test-secret-value"' >>"$BUNDLE_CONFIG_DIR/config.yaml"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_secret_fixture_succeeded'
+fi
+if grep -Fq 'test-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_secret_value_logged'
+fi
 
 mkdir -p \
   "$OUTPUT_DIR/html/2026-07-04" \

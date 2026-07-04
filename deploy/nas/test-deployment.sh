@@ -179,6 +179,9 @@ credentials:
   - token: ${BUNDLE_TOKEN}
 metadata:
   access_token_extra: retained-nonsecret-value
+nullable_credentials:
+  token:
+  next_key: same-level-value
 YAML
 printf '%s\n' '[WORD_GROUPS]' >"$BUNDLE_CONFIG_DIR/frequency_words.txt"
 printf '%s\n' 'timeline: enabled' >"$BUNDLE_CONFIG_DIR/timeline.yaml"
@@ -186,6 +189,10 @@ printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
 mkdir -p "$BUNDLE_CONFIG_DIR/output"
 printf '%s\n' 'historical report' >"$BUNDLE_CONFIG_DIR/output/history.html"
+for cache_dir in .pytest_cache .mypy_cache .ruff_cache; do
+  mkdir -p "$BUNDLE_CONFIG_DIR/$cache_dir"
+  printf '%s\n' 'token: cache-secret-value' >"$BUNDLE_CONFIG_DIR/$cache_dir/state"
+done
 
 CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
   "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1 || fail 'bundle_safe_fixture_failed'
@@ -195,6 +202,10 @@ CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
   fail 'bundle_config_incomplete'
 [[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/output" ]] ||
   fail 'bundle_contains_historical_output'
+for cache_dir in .pytest_cache .mypy_cache .ruff_cache; do
+  [[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/$cache_dir" ]] ||
+    fail "bundle_contains_cache:$cache_dir"
+done
 if find "$BUNDLE_DIST_DIR/trendradar-nas" -type f \
   \( -name '.env' -o -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) |
   grep -q .; then
@@ -207,6 +218,10 @@ fi
 if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
   grep -Fq 'trendradar-nas/config/output/'; then
   fail 'bundle_archive_contains_historical_output'
+fi
+if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
+  grep -Eq 'trendradar-nas/config/[.](pytest|mypy|ruff)_cache/'; then
+  fail 'bundle_archive_contains_cache'
 fi
 
 printf '%s\n' 'old directory marker' > \
@@ -270,6 +285,20 @@ if grep -Fq 'bracket-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_bracket_secret_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/bracket-secret.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/multiline-secret.yaml" <<'YAML'
+credentials:
+  token:
+    multiline-secret-value
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_multiline_secret_fixture_succeeded'
+fi
+if grep -Fq 'multiline-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_multiline_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/multiline-secret.yaml"
 
 cat >"$BUNDLE_CONFIG_DIR/list-secret.yaml" <<'YAML'
 credentials:

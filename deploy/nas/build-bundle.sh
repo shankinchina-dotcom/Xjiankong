@@ -30,7 +30,6 @@ import sys
 
 config_root = os.path.realpath(sys.argv[1])
 excluded_names = {'.env'}
-excluded_dirs = {'.git', '.cache', '__pycache__', 'cache', 'output'}
 excluded_suffixes = ('.db', '.sqlite', '.sqlite3', '.pyc')
 secret_fields = {'api_key', 'webhook_url', 'token', 'secret', 'password'}
 credential_patterns = (
@@ -42,6 +41,14 @@ credential_patterns = (
         r'(?i)https?://[^\s"\'<>]*(?:webhook|hooks/)[^\s"\'<>]*'
     )),
 )
+
+
+def is_excluded_directory(name):
+    return (
+        name in {'.git', 'output', '__pycache__', 'cache', '.tox', '.nox'}
+        or name.endswith('_cache')
+        or name.endswith('.cache')
+    )
 
 
 def strip_comment(value):
@@ -76,6 +83,28 @@ def is_allowed_empty_or_env(value):
     if value.lower() in ('', 'null', '~'):
         return True
     return re.fullmatch(r'\$\{[A-Za-z_][A-Za-z0-9_]*\}', value) is not None
+
+
+def has_multiline_value(lines, line_index, current_line, match, relative):
+    current_indent = len(current_line) - len(current_line.lstrip())
+    prefix = current_line[:match.start()]
+    json_context = relative.lower().endswith('.json') or '{' in prefix or '[' in prefix
+    mapping_key = re.compile(r'^["\']?[A-Za-z0-9_.-]+["\']?\s*:')
+
+    for following_line in lines[line_index + 1:]:
+        clean_following = strip_comment(following_line)
+        if not clean_following.strip():
+            continue
+        following_indent = len(clean_following) - len(clean_following.lstrip())
+        if following_indent > current_indent:
+            return True
+        if json_context:
+            stripped = clean_following.strip()
+            if stripped.startswith(('}', ']')) or mapping_key.match(stripped):
+                return False
+            return True
+        return False
+    return False
 
 
 config_path = os.path.join(config_root, 'config.yaml')
@@ -113,7 +142,7 @@ field_pattern = re.compile(
 )
 
 for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
-    dirnames[:] = [name for name in dirnames if name not in excluded_dirs]
+    dirnames[:] = [name for name in dirnames if not is_excluded_directory(name)]
     for filename in filenames:
         if filename in excluded_names or filename.lower().endswith(excluded_suffixes):
             continue
@@ -126,11 +155,21 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 content = handle.read()
         except (UnicodeDecodeError, OSError):
             continue
-        for line in content.splitlines():
+        lines = content.splitlines()
+        for line_index, line in enumerate(lines):
             clean_line = strip_comment(line)
             for match in field_pattern.finditer(clean_line):
                 field = match.group('field').lower()
-                value = scalar_value(match.group('value'))
+                raw_value = match.group('value').strip()
+                value = scalar_value(raw_value)
+                if not raw_value and has_multiline_value(
+                    lines, line_index, clean_line, match, relative
+                ):
+                    print(
+                        f'bundle_build=failed reason=secret_field:{relative}:{field}',
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
                 if field in secret_fields and not is_allowed_empty_or_env(value):
                     print(
                         f'bundle_build=failed reason=secret_field:{relative}:{field}',
@@ -192,11 +231,30 @@ cp "$SCRIPT_DIR/.env.example" "$BUNDLE_DIR/.env.example"
 cp "$SCRIPT_DIR/nginx.conf" "$BUNDLE_DIR/nginx.conf"
 cp "$SCRIPT_DIR/README.md" "$BUNDLE_DIR/README.md"
 
+is_excluded_config_directory() {
+  local name="$1"
+
+  case "$name" in
+    .git | output | __pycache__ | cache | .tox | .nox | *_cache | *.cache) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+path_has_excluded_config_directory() {
+  local remaining="$1"
+  local component
+
+  while [[ "$remaining" == */* ]]; do
+    component="${remaining%%/*}"
+    is_excluded_config_directory "$component" && return 0
+    remaining="${remaining#*/}"
+  done
+  return 1
+}
+
 while IFS= read -r -d '' source_path; do
   relative_path="${source_path#"$CONFIG_SOURCE"/}"
-  case "/$relative_path/" in
-    */.git/* | */.cache/* | */__pycache__/* | */cache/* | */output/*) continue ;;
-  esac
+  path_has_excluded_config_directory "$relative_path" && continue
   case "${relative_path##*/}" in
     .env | *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
   esac

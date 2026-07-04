@@ -42,7 +42,7 @@ cloudflare/cloudflared@sha256:6d91c121b803126f7a5344005d17a9324788fc09d305b6e256
 - Modify: .gitignore
 - Create: deploy/nas/test-deployment.sh
 
-- [ ] **Step 1: 声明目录并忽略本地状态**
+- [x] **Step 1: 声明目录并忽略本地状态**
 
 在 AGENTS.md 文件表加入：
 
@@ -59,7 +59,9 @@ cloudflare/cloudflared@sha256:6d91c121b803126f7a5344005d17a9324788fc09d305b6e256
 /deploy/nas/config/
 ~~~
 
-- [ ] **Step 2: 创建失败测试**
+- [x] **Step 2: 创建失败测试**
+
+> 最终实现：测试脚本在原始草案上增加了 Compose 渲染、网络隔离、敏感路径、部署包事务性以及 AI 分析/翻译默认关闭检查。
 
 创建 deploy/nas/test-deployment.sh：
 
@@ -89,6 +91,7 @@ fi
 grep -q '0 \*/4 \* \* \*' "$ENV_FILE"
 grep -q '^IMMEDIATE_RUN=false$' "$ENV_FILE"
 grep -q '^AI_ANALYSIS_ENABLED=false$' "$ENV_FILE"
+grep -q '^AI_TRANSLATION_ENABLED=false$' "$ENV_FILE"
 grep -q '^AI_API_KEY=$' "$ENV_FILE"
 grep -q '^CLOUDFLARE_TUNNEL_TOKEN=$' "$ENV_FILE"
 grep -q 'location ~\* \^/(news|rss|meta|config)' "$NGINX_CONF"
@@ -145,7 +148,7 @@ done
 echo "nas_integration=passed"
 ~~~
 
-- [ ] **Step 3: 确认测试先失败**
+- [x] **Step 3: 确认测试先失败**
 
 ~~~bash
 chmod +x deploy/nas/test-deployment.sh
@@ -154,7 +157,7 @@ bash deploy/nas/test-deployment.sh --static
 
 Expected: FAIL，错误以 missing: deploy/nas/docker-compose.yml 结束。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ~~~bash
 git add AGENTS.md .gitignore deploy/nas/test-deployment.sh
@@ -169,7 +172,9 @@ git commit -m "test: define NAS deployment checks"
 - Create: deploy/nas/nginx.conf
 - Test: deploy/nas/test-deployment.sh
 
-- [ ] **Step 1: 创建 deploy/nas/docker-compose.yml**
+- [x] **Step 1: 创建 deploy/nas/docker-compose.yml**
+
+> 最终实现：Compose 文件名按 DSM 导入流程调整为 `docker-compose.yml`，AI 分析与翻译均默认关闭。
 
 ~~~yaml
 name: xjiankong
@@ -185,6 +190,7 @@ services:
       RUN_MODE: ${RUN_MODE:-cron}
       IMMEDIATE_RUN: ${IMMEDIATE_RUN:-false}
       AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}
+      AI_TRANSLATION_ENABLED: ${AI_TRANSLATION_ENABLED:-false}
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-deepseek/deepseek-chat}
       AI_API_BASE: ${AI_API_BASE:-}
@@ -227,7 +233,7 @@ networks:
     internal: false
 ~~~
 
-- [ ] **Step 2: 创建 deploy/nas/.env.example**
+- [x] **Step 2: 创建 deploy/nas/.env.example**
 
 ~~~dotenv
 TRENDRADAR_IMAGE=wantcat/trendradar@sha256:de396d242c105d697c2765f5341ca71a45d9bcefe934d1d32b511eeae2f0d0be
@@ -238,6 +244,7 @@ CRON_SCHEDULE=0 */4 * * *
 RUN_MODE=cron
 IMMEDIATE_RUN=false
 AI_ANALYSIS_ENABLED=false
+AI_TRANSLATION_ENABLED=false
 AI_MODEL=deepseek/deepseek-chat
 AI_API_BASE=
 AI_API_KEY=
@@ -246,7 +253,7 @@ CONFIG_DIR=./config
 OUTPUT_DIR=./output
 ~~~
 
-- [ ] **Step 3: 创建 deploy/nas/nginx.conf**
+- [x] **Step 3: 创建 deploy/nas/nginx.conf**
 
 ~~~nginx
 server {
@@ -295,7 +302,9 @@ server {
 }
 ~~~
 
-- [ ] **Step 4: 运行测试**
+- [x] **Step 4: 运行测试**
+
+> 最终实现：静态测试同时断言 `.env.example` 值和渲染后 Compose 中的 `AI_ANALYSIS_ENABLED`、`AI_TRANSLATION_ENABLED` 均为 `false`。
 
 ~~~bash
 bash deploy/nas/test-deployment.sh --static
@@ -304,7 +313,7 @@ bash deploy/nas/test-deployment.sh --integration
 
 Expected: 分别输出 nas_static=passed 和 nas_integration=passed。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ~~~bash
 git add deploy/nas/docker-compose.yml deploy/nas/.env.example deploy/nas/nginx.conf
@@ -318,7 +327,7 @@ git commit -m "feat: add hardened NAS compose stack"
 - Create: deploy/nas/README.md
 - Modify: deploy/nas/test-deployment.sh
 
-- [ ] **Step 1: 在 test-deployment.sh 的 compose 检查前增加失败断言**
+- [x] **Step 1: 在 test-deployment.sh 的 compose 检查前增加失败断言**
 
 ~~~bash
 test -x "$SCRIPT_DIR/build-bundle.sh" || {
@@ -332,13 +341,15 @@ Run: bash deploy/nas/test-deployment.sh --static
 
 Expected: FAIL，错误包含 missing executable。
 
-- [ ] **Step 2: 创建仅含标题的 README**
+- [x] **Step 2: 创建仅含标题的 README**
 
 ~~~markdown
 # TrendRadar 群晖部署
 ~~~
 
-- [ ] **Step 3: 创建 deploy/nas/build-bundle.sh**
+- [x] **Step 3: 创建 deploy/nas/build-bundle.sh**
+
+> 最终实现：生成器改为事务性发布，输出包内使用 `docker-compose.yml`，并扩展了 YAML/JSON/纯文本凭据扫描和失败恢复。
 
 ~~~bash
 #!/usr/bin/env bash
@@ -404,7 +415,7 @@ echo "bundle_dir=$BUNDLE_DIR"
 echo "archive=$ARCHIVE"
 ~~~
 
-- [ ] **Step 4: 给 integration 测试增加生成器正反用例**
+- [x] **Step 4: 给 integration 测试增加生成器正反用例**
 
 在 nas_integration=passed 之前加入：
 
@@ -430,7 +441,7 @@ if CONFIG_SOURCE="$FIXTURE_CONFIG" DIST_ROOT="$FIXTURE_DIST/bad" \
 fi
 ~~~
 
-- [ ] **Step 5: 运行测试并生成真实包**
+- [x] **Step 5: 运行测试并生成真实包**
 
 ~~~bash
 chmod +x deploy/nas/build-bundle.sh
@@ -445,7 +456,7 @@ test ! -e dist/trendradar-nas/.env
 
 Expected: 测试通过，包中没有 .env、数据库或历史 HTML。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ~~~bash
 git add deploy/nas/build-bundle.sh deploy/nas/test-deployment.sh deploy/nas/README.md
@@ -457,7 +468,9 @@ git commit -m "feat: generate secret-free NAS bundle"
 **Files:**
 - Modify: deploy/nas/README.md
 
-- [ ] **Step 1: 将 README 替换为完整内容**
+- [x] **Step 1: 将 README 替换为完整内容**
+
+> 最终实现：手册使用当前 DSM/Cloudflare 界面，Source 从当前电脑上传本地 `dist/trendradar-nas/docker-compose.yml`，并以分析/翻译双开关落实首次付费闸门。
 
 ~~~markdown
 # TrendRadar 群晖部署
@@ -486,25 +499,25 @@ git commit -m "feat: generate secret-free NAS bundle"
 
 复制 .env.example 为 .env，只填写 AI_API_KEY 和
 CLOUDFLARE_TUNNEL_TOKEN。保留 AI_MODEL=deepseek/deepseek-chat、
-空 AI_API_BASE、AI_ANALYSIS_ENABLED=false 和四小时调度。
+空 AI_API_BASE、AI_ANALYSIS_ENABLED=false、AI_TRANSLATION_ENABLED=false 和四小时调度。
 
 ## 创建 Container Manager 项目
 
 - Project name: xjiankong
-- Source: 上传 docker-compose.yml
 - Project path: /volume1/docker/trendradar-nas/
+- Source: 从当前电脑的 dist/trendradar-nas/docker-compose.yml 上传
 - 不启用可选 Web Station portal/网页入口。
 - 启动前确认没有端口映射。
 
 ## 首次验收
 
-启动后保持 AI_ANALYSIS_ENABLED=false，先确认三个容器和公网页面安全。未确认前 cron 可继续采集但不调用 AI。获得老板对单次付费 AI 调用的再次明确批准后，
+启动后保持 AI_ANALYSIS_ENABLED=false 和 AI_TRANSLATION_ENABLED=false，先确认三个容器和公网页面安全。未确认前 cron 可继续采集但不调用 AI。获得老板对单次付费 AI 调用的再次明确批准后，
 在 xjiankong-trendradar 容器终端执行：
 
-cd /app && AI_ANALYSIS_ENABLED=true python -m trendradar
+cd /app && AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar
 
 验证 output/index.html 已生成、trend.shankluo.cc 可访问、敏感路径返回
-404、日志显示四小时调度，并且重启项目不会立即采集。验收成功后才将 NAS .env 的 AI_ANALYSIS_ENABLED 改为 true，在 Container Manager 的 xjiankong 项目页停止项目，再重新构建并启动项目，以重建 trendradar 容器并使后续四小时 cron 启用 AI。
+404、日志显示四小时调度，并且重启项目不会立即采集。验收成功后才将 NAS .env 的 AI_ANALYSIS_ENABLED 和 AI_TRANSLATION_ENABLED 同时改为 true，在 Container Manager 的 xjiankong 项目页停止项目，再重新构建并启动项目，以重建 trendradar 容器并使后续四小时 cron 启用 AI 分析与翻译。
 
 ## 更新与回滚
 
@@ -512,7 +525,7 @@ cd /app && AI_ANALYSIS_ENABLED=true python -m trendradar
 镜像升级必须先通过本地集成测试。只将新 .env.example 的 TRENDRADAR_IMAGE、REPORT_WEB_IMAGE、CLOUDFLARED_IMAGE 三行复制到现有 .env，保留 key/token。回滚时恢复上一份 docker-compose.yml 和这三行旧 digest，然后重建项目。
 ~~~
 
-- [ ] **Step 2: 扫描并重新打包**
+- [x] **Step 2: 扫描并重新打包**
 
 ~~~bash
 ! rg -n 'AI_API_KEY=.+|CLOUDFLARE_TUNNEL_TOKEN=.+|ports:|8080:8080' deploy/nas/README.md
@@ -523,7 +536,7 @@ tar -xOf dist/trendradar-nas.tar.gz trendradar-nas/README.md \
 
 Expected: 扫描无命中，归档中的手册包含公网域名。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ~~~bash
 git add deploy/nas/README.md
@@ -536,7 +549,7 @@ git commit -m "docs: add Synology deployment runbook"
 - Modify: quality-check.sh
 - Modify: .github/workflows/quality.yml
 
-- [ ] **Step 1: 在 quality-check.sh 文档检查后加入 NAS 检查**
+- [x] **Step 1: 在 quality-check.sh 文档检查后加入 NAS 检查**
 
 ~~~bash
 echo ""
@@ -551,7 +564,7 @@ check "NAS 静态检查通过" bash deploy/nas/test-deployment.sh --static
 
 将 TrendRadar 标题改为 [6/6]，其他固定编号统一改为 /6。
 
-- [ ] **Step 2: 证明门禁能发现错误**
+- [x] **Step 2: 证明门禁能发现错误**
 
 ~~~bash
 mv deploy/nas/nginx.conf /tmp/xjiankong-nginx.conf
@@ -561,7 +574,7 @@ mv /tmp/xjiankong-nginx.conf deploy/nas/nginx.conf
 
 Expected: 至少一项 NAS 检查失败。
 
-- [ ] **Step 3: 恢复后运行检查**
+- [x] **Step 3: 恢复后运行检查**
 
 ~~~bash
 bash quality-check.sh
@@ -570,7 +583,7 @@ bash quality-check.sh --trendradar
 
 Expected: 两组检查均 0 失败。
 
-- [ ] **Step 4: 在 CI custom-checks 中加入**
+- [x] **Step 4: 在 CI custom-checks 中加入**
 
 ~~~yaml
       - name: Validate NAS deployment templates
@@ -580,7 +593,7 @@ Expected: 两组检查均 0 失败。
           bash deploy/nas/test-deployment.sh --static
 ~~~
 
-- [ ] **Step 5: 本地模拟并提交**
+- [x] **Step 5: 本地模拟并提交**
 
 ~~~bash
 bash -n deploy/nas/build-bundle.sh
@@ -599,7 +612,7 @@ Expected: 全部成功，git diff --check 无输出。
 **Files:**
 - Verify only
 
-- [ ] **Step 1: 执行完整测试**
+- [x] **Step 1: 执行完整测试**
 
 ~~~bash
 bash quality-check.sh
@@ -611,7 +624,7 @@ git diff --check
 
 Expected: 全部退出码为 0。
 
-- [ ] **Step 2: 生成并扫描最终包**
+- [x] **Step 2: 生成并扫描最终包**
 
 ~~~bash
 rm -rf dist/trendradar-nas dist/trendradar-nas.tar.gz
@@ -625,7 +638,7 @@ test ! -e dist/trendradar-nas/.env
 
 Expected: 没有凭据或数据库命中。
 
-- [ ] **Step 3: 检查范围**
+- [x] **Step 3: 检查范围**
 
 ~~~bash
 git status --short
@@ -677,7 +690,7 @@ AI Key 和新 Tunnel Token，不在日志、截图或对话中显示值。
 ~~~text
 Project name: xjiankong
 Path: /volume1/docker/trendradar-nas
-Source: 上传 docker-compose.yml
+Source: 从当前电脑的 dist/trendradar-nas/docker-compose.yml 上传
 Web Station portal/网页入口: 不启用
 ~~~
 
@@ -685,19 +698,19 @@ Expected: 三个容器运行，界面没有端口映射。
 
 - [ ] **Step 5: 确认启动不调用模型**
 
-日志必须显示 CRON_SCHEDULE 为 0 */4 * * *、IMMEDIATE_RUN 为 false、AI_ANALYSIS_ENABLED 为 false，且启动后没有立即采集。未批准前 cron 可采集但不调用 AI。
+日志必须显示 CRON_SCHEDULE 为 0 */4 * * *、IMMEDIATE_RUN 为 false、AI_ANALYSIS_ENABLED 为 false、AI_TRANSLATION_ENABLED 为 false，且启动后没有立即采集。未批准前 cron 可采集但不调用 AI。
 
 - [ ] **Step 6: 再次确认费用后人工采集**
 
 ~~~bash
-cd /app && AI_ANALYSIS_ENABLED=true python -m trendradar
+cd /app && AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar
 ~~~
 
 Expected: 退出码 0，生成 index.html 和当天 HTML，日志无密钥。
 
-- [ ] **Step 6a: 启用后续 cron AI 分析**
+- [ ] **Step 6a: 启用后续 cron AI 分析与翻译**
 
-首次付费验收成功后，将 NAS `.env` 中 `AI_ANALYSIS_ENABLED` 改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目，以重建 `trendradar` 容器。
+首次付费验收成功后，将 NAS `.env` 中 `AI_ANALYSIS_ENABLED` 和 `AI_TRANSLATION_ENABLED` 同时改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目，以重建 `trendradar` 容器。
 
 - [ ] **Step 7: 公网安全验收**
 

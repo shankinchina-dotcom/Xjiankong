@@ -118,6 +118,8 @@ if grep -Fq 'trendradar-mcp' "$COMPOSE_FILE"; then
 fi
 grep -Fq 'AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}' \
   "$COMPOSE_FILE" || fail 'compose_ai_analysis_default_not_false'
+grep -Fq 'AI_TRANSLATION_ENABLED: ${AI_TRANSLATION_ENABLED:-false}' \
+  "$COMPOSE_FILE" || fail 'compose_ai_translation_default_not_false'
 
 [[ "$(env_value CRON_SCHEDULE)" == '0 */4 * * *' ]] ||
   fail 'env_invalid_CRON_SCHEDULE'
@@ -125,6 +127,8 @@ grep -Fq 'AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}' \
   fail 'env_invalid_IMMEDIATE_RUN'
 [[ "$(env_value AI_ANALYSIS_ENABLED)" == 'false' ]] ||
   fail 'env_invalid_AI_ANALYSIS_ENABLED'
+[[ "$(env_value AI_TRANSLATION_ENABLED)" == 'false' ]] ||
+  fail 'env_invalid_AI_TRANSLATION_ENABLED'
 require_env_key AI_API_KEY
 require_env_key CLOUDFLARE_TUNNEL_TOKEN
 [[ -z "$(env_value AI_API_KEY)" ]] || fail 'env_nonempty_AI_API_KEY'
@@ -144,6 +148,10 @@ printf '%s\n' "$COMPOSE_JSON" | jq -e '
   and (.services["report-web"].networks | keys) == ["publish"]
   and (.services.cloudflared.networks | keys) == ["publish"]
 ' >/dev/null || fail 'compose_invalid_network_isolation'
+printf '%s\n' "$COMPOSE_JSON" | jq -e '
+  .services.trendradar.environment.AI_ANALYSIS_ENABLED == "false"
+  and .services.trendradar.environment.AI_TRANSLATION_ENABLED == "false"
+' >/dev/null || fail 'compose_ai_features_not_disabled'
 
 if [[ "$MODE" == '--static' ]]; then
   printf 'nas_static=passed\n'

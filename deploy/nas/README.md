@@ -37,14 +37,15 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
    - `CRON_SCHEDULE` 保持每 4 小时执行一次。
    - `IMMEDIATE_RUN` 保持为 `false`。
    - `AI_ANALYSIS_ENABLED` 保持为 `false`。
+   - `AI_TRANSLATION_ENABLED` 保持为 `false`。
 6. 在 DSM File Station 中右键 `.env`，打开 **属性 -> 权限**：仅保留管理员的读写权限，移除 `users` 和 `everyone` 的权限。`.env` 备份副本必须使用相同权限，且不得放入任何同步或公开目录。
 
 ## 4. 在 Container Manager 创建项目
 
 1. 打开 Container Manager，进入 **项目 -> 新增/创建**。
 2. Project name 填写 `xjiankong`。
-3. Source 选择上传 `docker-compose.yml`，从解压包中选择 `/volume1/docker/trendradar-nas/docker-compose.yml`。
-4. Project path 选择 `/volume1/docker/trendradar-nas/`。
+3. Project path 填写 NAS 路径 `/volume1/docker/trendradar-nas/`。
+4. Source 选择“上传 `docker-compose.yml`”，在当前电脑上从本地生成目录选择 `dist/trendradar-nas/docker-compose.yml` 上传。不要在该上传控件中填写 NAS 路径。
 5. 不启用可选的 Web Station portal/网页入口。
 6. 启动前在 Container Manager 预览 Compose，确认没有任何宿主机端口映射，再构建并启动项目。
 
@@ -57,13 +58,13 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
 ## 5. 首次启动与验收
 
 1. 启动项目后，先在 Container Manager 确认三个容器都处于运行状态，且 `report-web` 健康检查通过。
-2. `IMMEDIATE_RUN=false` 表示创建或重启容器时不会立即采集。`AI_ANALYSIS_ENABLED=false` 是首次启动的安全默认；未确认前，cron 可继续采集，但不调用 AI。
-3. 先在保持 `AI_ANALYSIS_ENABLED=false` 的状态下完成三个容器状态、无端口映射和公网页面安全检查。
+2. `IMMEDIATE_RUN=false` 表示创建或重启容器时不会立即采集。`AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 表示首次启动时 AI 分析与 AI 翻译都关闭；未确认前，cron 可继续采集，但不调用 AI。
+3. 先在保持两个 AI 开关都为 `false` 的状态下完成三个容器状态、无端口映射和公网页面安全检查。
 4. 首次付费 AI 验收前，必须再次获得老板对“本次单次付费 AI 调用”的明确批准。获得批准后，在 `xjiankong-trendradar` 容器的终端中执行：
 
    ```bash
    cd /app
-   AI_ANALYSIS_ENABLED=true python -m trendradar
+   AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar
    ```
 
 5. 单次运行完成后，确认 `/volume1/docker/trendradar-nas/output/index.html` 存在并可读。
@@ -71,7 +72,7 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
 7. 用浏览器或 `curl` 检查敏感路径，如 `/news/`，`/rss/`，`/config/`，`/.env` 和任意数据库文件，必须全部返回 `404`。
 8. 检查 `xjiankong-trendradar` 日志，确认 cron 已按每 4 小时的调度加载。
 9. 在不触发手动运行的前提下重启项目，然后立即检查日志：应只恢复调度，不应立即采集或调用 AI。
-10. 以上验收成功后，才将 NAS `.env` 中 `AI_ANALYSIS_ENABLED` 改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目；该操作会按新 `.env` 重建 `trendradar` 容器，使后续每 4 小时 cron 启用 AI。
+10. 以上验收成功后，才将 NAS `.env` 中 `AI_ANALYSIS_ENABLED` 和 `AI_TRANSLATION_ENABLED` 同时改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目；该操作会按新 `.env` 重建 `trendradar` 容器，使后续每 4 小时 cron 启用 AI 分析与翻译。
 
 如果尚未生成任何报告，根路径返回 `404` 是预期结果，不表示 Web 容器故障。
 

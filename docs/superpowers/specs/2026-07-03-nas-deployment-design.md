@@ -88,19 +88,19 @@ trend.shankluo.cc -> http://report-web:80
 - 时区：`Asia/Taipei`。
 - 采集计划：`0 */4 * * *`，即每天 00:00、04:00、08:00、12:00、16:00、20:00。
 - `IMMEDIATE_RUN=false`，避免容器重启触发额外 AI 调用。
-- `AI_ANALYSIS_ENABLED=false` 作为首次部署的安全默认；未确认付费调用前，cron 可继续采集，但不调用 AI。
+- `AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 作为首次部署的安全默认，同时关闭 AI 分析与翻译；未确认付费调用前，cron 可继续采集，但不调用 AI。
 - 生产过滤方式保持 `filter.method=keyword`。
 - AI 模型、API Base 和分析行为沿用当前本地部署；AI Key 只从 `.env` 注入。
 - `config/` 以只读方式挂载，`output/` 以读写方式挂载。
 - 不发布内置 Web 端口。
 
-首次部署完成后，先保持 `AI_ANALYSIS_ENABLED=false` 验收容器和公网边界。老板再次明确批准单次付费 AI 调用后，仅在该次容器命令中临时启用：
+首次部署完成后，先保持 `AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 验收容器和公网边界。老板再次明确批准单次付费 AI 调用后，仅在该次容器命令中临时启用：
 
 ```bash
-AI_ANALYSIS_ENABLED=true python -m trendradar
+AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar
 ```
 
-验收成功后才将 NAS `.env` 中的 `AI_ANALYSIS_ENABLED` 改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目；该操作会按新 `.env` 重建 `trendradar` 容器，使后续每 4 小时 cron 启用 AI。
+验收成功后才将 NAS `.env` 中的 `AI_ANALYSIS_ENABLED` 和 `AI_TRANSLATION_ENABLED` 同时改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目；该操作会按新 `.env` 重建 `trendradar` 容器，使后续每 4 小时 cron 启用 AI 分析与翻译。
 
 ### 4.2 report-web
 
@@ -165,7 +165,7 @@ deploy/nas/
 - 对输出执行敏感字段扫描；发现非空 API Key、Webhook、Token 或密码时失败退出。
 - 生成物放入仓库忽略的临时输出目录，不作为配置源提交。
 
-群晖端操作保持为：上传并解压、复制 `.env.example` 为 `.env`、只填写两个凭据变量，再在 Container Manager 的“项目 -> 新增/创建”中选择上传来源，从解压包选择 `docker-compose.yml`，项目路径为 `/volume1/docker/trendradar-nas/`。不启用可选的 Web Station portal/网页入口。
+群晖端操作保持为：将 tar 包上传 NAS 并解压、复制 `.env.example` 为 `.env`、只填写两个凭据变量。在 Container Manager 的“项目 -> 新增/创建”中，项目路径填 NAS 路径 `/volume1/docker/trendradar-nas/`；Source 选择“上传 `docker-compose.yml`”时，从当前电脑的本地生成目录 `dist/trendradar-nas/docker-compose.yml` 选择上传，不在上传控件中填写 NAS 路径。不启用可选的 Web Station portal/网页入口。
 
 必须填写的环境变量：
 
@@ -174,7 +174,7 @@ AI_API_KEY
 CLOUDFLARE_TUNNEL_TOKEN
 ```
 
-`AI_MODEL` 保留 `deepseek/deepseek-chat`，`AI_API_BASE` 保持为空，`AI_ANALYSIS_ENABLED` 默认为 `false`。
+`AI_MODEL` 保留 `deepseek/deepseek-chat`，`AI_API_BASE` 保持为空，`AI_ANALYSIS_ENABLED` 和 `AI_TRANSLATION_ENABLED` 默认为 `false`。
 
 ## 七、Cloudflare 配置
 
@@ -228,9 +228,9 @@ Service URL：http://report-web:80
 - `trendradar`、`report-web`、`cloudflared` 均处于运行状态。
 - 容器重启策略为 `unless-stopped`。
 - `trendradar` 日志显示 cron 为 `0 */4 * * *`，且启动时未自动采集。
-- 人工确认后使用 `AI_ANALYSIS_ENABLED=true python -m trendradar` 执行一次采集，成功生成 `output/index.html` 和日期 HTML。
+- 人工确认后使用 `AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar` 执行一次采集，成功生成 `output/index.html` 和日期 HTML。
 - AI 分析成功，日志不包含 AI Key 或 Tunnel Token。
-- 验收后将 NAS `.env` 中开关改为 `true`，在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目，以重建 `trendradar` 容器；下一个 4 小时 cron 启用 AI。
+- 验收后将 NAS `.env` 中 `AI_ANALYSIS_ENABLED` 和 `AI_TRANSLATION_ENABLED` 同时改为 `true`，在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目，以重建 `trendradar` 容器；下一个 4 小时 cron 启用 AI 分析与翻译。
 
 ### 10.3 公网验证
 

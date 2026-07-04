@@ -11,6 +11,7 @@ services:
       RUN_MODE: ${RUN_MODE:-cron}
       IMMEDIATE_RUN: ${IMMEDIATE_RUN:-false}
       AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}
+      AI_TRANSLATION_ENABLED: ${AI_TRANSLATION_ENABLED:-false}
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-deepseek/deepseek-chat}
       AI_API_BASE: ${AI_API_BASE:-}

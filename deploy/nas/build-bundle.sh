@@ -25,6 +25,7 @@ command -v python3 >/dev/null 2>&1 || fail 'python3_not_found'
 
 python3 - "$CONFIG_SOURCE" <<'PY'
 import os
+import json
 import re
 import sys
 
@@ -85,26 +86,40 @@ def is_allowed_empty_or_env(value):
     return re.fullmatch(r'\$\{[A-Za-z_][A-Za-z0-9_]*\}', value) is not None
 
 
-def has_multiline_value(lines, line_index, current_line, match, relative):
-    current_indent = len(current_line) - len(current_line.lstrip())
-    prefix = current_line[:match.start()]
-    json_context = relative.lower().endswith('.json') or '{' in prefix or '[' in prefix
-    mapping_key = re.compile(r'^["\']?[A-Za-z0-9_.-]+["\']?\s*:')
+def fail_secret(relative, field):
+    print(
+        f'bundle_build=failed reason=secret_field:{relative}:{field}',
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
+
+def check_json_value(value, relative):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            field = key.lower()
+            if field in secret_fields:
+                if child is None:
+                    continue
+                if not isinstance(child, str) or not is_allowed_empty_or_env(child.strip()):
+                    fail_secret(relative, field)
+            check_json_value(child, relative)
+    elif isinstance(value, list):
+        for child in value:
+            check_json_value(child, relative)
+
+
+def multiline_values(lines, line_index, key_column):
+    values = []
     for following_line in lines[line_index + 1:]:
         clean_following = strip_comment(following_line)
         if not clean_following.strip():
             continue
         following_indent = len(clean_following) - len(clean_following.lstrip())
-        if following_indent > current_indent:
-            return True
-        if json_context:
-            stripped = clean_following.strip()
-            if stripped.startswith(('}', ']')) or mapping_key.match(stripped):
-                return False
-            return True
-        return False
-    return False
+        if following_indent <= key_column:
+            break
+        values.append(clean_following.strip())
+    return values
 
 
 config_path = os.path.join(config_root, 'config.yaml')
@@ -155,6 +170,24 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 content = handle.read()
         except (UnicodeDecodeError, OSError):
             continue
+        if relative.lower().endswith('.json'):
+            try:
+                json_value = json.loads(content)
+            except (json.JSONDecodeError, RecursionError):
+                print(
+                    f'bundle_build=failed reason=invalid_json:{relative}',
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            check_json_value(json_value, relative)
+            for label, pattern in credential_patterns:
+                if pattern.search(content):
+                    print(
+                        f'bundle_build=failed reason={label}:{relative}',
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+            continue
         lines = content.splitlines()
         for line_index, line in enumerate(lines):
             clean_line = strip_comment(line)
@@ -162,20 +195,32 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 field = match.group('field').lower()
                 raw_value = match.group('value').strip()
                 value = scalar_value(raw_value)
-                if not raw_value and has_multiline_value(
-                    lines, line_index, clean_line, match, relative
-                ):
-                    print(
-                        f'bundle_build=failed reason=secret_field:{relative}:{field}',
-                        file=sys.stderr,
+                if field not in secret_fields:
+                    continue
+                if value in ('|', '>', '|-', '|+', '>-', '>+'):
+                    block_values = multiline_values(
+                        lines, line_index, match.start('field')
                     )
-                    sys.exit(1)
-                if field in secret_fields and not is_allowed_empty_or_env(value):
-                    print(
-                        f'bundle_build=failed reason=secret_field:{relative}:{field}',
-                        file=sys.stderr,
+                    if len(block_values) > 1 or (
+                        block_values and not is_allowed_empty_or_env(
+                            scalar_value(block_values[0])
+                        )
+                    ):
+                        fail_secret(relative, field)
+                    continue
+                if not raw_value:
+                    nested_values = multiline_values(
+                        lines, line_index, match.start('field')
                     )
-                    sys.exit(1)
+                    if len(nested_values) > 1 or (
+                        nested_values and not is_allowed_empty_or_env(
+                            scalar_value(nested_values[0])
+                        )
+                    ):
+                        fail_secret(relative, field)
+                    continue
+                if not is_allowed_empty_or_env(value):
+                    fail_secret(relative, field)
         for label, pattern in credential_patterns:
             if pattern.search(content):
                 print(

@@ -182,9 +182,32 @@ metadata:
 nullable_credentials:
   token:
   next_key: same-level-value
+list_nullable_credentials:
+  - token:
+    next_key: same-list-item-value
 YAML
 printf '%s\n' '[WORD_GROUPS]' >"$BUNDLE_CONFIG_DIR/frequency_words.txt"
 printf '%s\n' 'timeline: enabled' >"$BUNDLE_CONFIG_DIR/timeline.yaml"
+cat >"$BUNDLE_CONFIG_DIR/multiline-safe.yaml" <<'YAML'
+newline_null:
+  token:
+    null
+empty_block:
+  token: |
+env_block:
+  token: |
+    ${BLOCK_TOKEN}
+YAML
+cat >"$BUNDLE_CONFIG_DIR/multiline-safe.json" <<'JSON'
+{
+  "token":
+    null,
+  "nested": {
+    "api_key":
+      "${JSON_API_KEY}"
+  }
+}
+JSON
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
 mkdir -p "$BUNDLE_CONFIG_DIR/output"
@@ -299,6 +322,49 @@ if grep -Fq 'multiline-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_multiline_secret_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/multiline-secret.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/block-secret.yaml" <<'YAML'
+credentials:
+  token: |
+    nonempty-block-secret-value
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_block_secret_fixture_succeeded'
+fi
+if grep -Fq 'nonempty-block-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_block_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/block-secret.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/json-secret.json" <<'JSON'
+{
+  "nested": {
+    "password": "nonempty-json-secret-value"
+  }
+}
+JSON
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_json_secret_fixture_succeeded'
+fi
+if grep -Fq 'nonempty-json-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_json_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/json-secret.json"
+
+printf '%s\n' '{"token": "invalid-json-secret-value"' > \
+  "$BUNDLE_CONFIG_DIR/invalid-secret.json"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_invalid_json_fixture_succeeded'
+fi
+if grep -Fq 'invalid-json-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_invalid_json_value_logged'
+fi
+grep -Fq 'invalid_json:invalid-secret.json' "$BUNDLE_LOG" ||
+  fail 'bundle_invalid_json_filename_missing'
+rm "$BUNDLE_CONFIG_DIR/invalid-secret.json"
 
 cat >"$BUNDLE_CONFIG_DIR/list-secret.yaml" <<'YAML'
 credentials:

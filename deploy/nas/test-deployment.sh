@@ -219,6 +219,7 @@ secret_access_key=''
 max_tokens=1000
 TEXT
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
+printf '%s\n' 'gitdir: ../worktrees/config' >"$BUNDLE_CONFIG_DIR/.git"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
 for uppercase_extension in DB SQLITE SQLITE3; do
   printf '%s\n' 'token: uppercase-database-secret-value' > \
@@ -239,6 +240,8 @@ CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
   fail 'bundle_config_incomplete'
 [[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/output" ]] ||
   fail 'bundle_contains_historical_output'
+[[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/.git" ]] ||
+  fail 'bundle_contains_git_control_file'
 for cache_dir in .pytest_cache .mypy_cache .ruff_cache; do
   [[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/$cache_dir" ]] ||
     fail "bundle_contains_cache:$cache_dir"
@@ -256,6 +259,10 @@ done
 if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
   grep -Eiq '(^|/)([.]env|[^/]+[.](db|sqlite|sqlite3))$'; then
   fail 'bundle_archive_contains_forbidden_file'
+fi
+if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
+  grep -Eq '(^|/)[.]git$'; then
+  fail 'bundle_archive_contains_git_control_file'
 fi
 if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
   grep -Fq 'trendradar-nas/config/output/'; then

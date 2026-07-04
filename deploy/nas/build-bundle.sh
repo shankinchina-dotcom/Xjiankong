@@ -31,7 +31,7 @@ import re
 import sys
 
 config_root = os.path.realpath(sys.argv[1])
-excluded_names = {'.env'}
+excluded_names = {'.env', '.git'}
 excluded_suffixes = ('.db', '.sqlite', '.sqlite3', '.pyc')
 exact_secret_fields = {'api_key', 'webhook_url', 'token', 'secret', 'password'}
 credential_patterns = (
@@ -187,7 +187,7 @@ PY
 
 ruby -rpsych - "$CONFIG_SOURCE" <<'RUBY'
 config_root = File.realpath(ARGV.fetch(0))
-excluded_names = ['.env'].freeze
+excluded_names = ['.env', '.git'].freeze
 excluded_suffixes = ['.db', '.sqlite', '.sqlite3', '.pyc'].freeze
 exact_secret_fields = %w[api_key webhook_url token secret password].freeze
 block_styles = [
@@ -375,11 +375,14 @@ path_has_excluded_config_directory() {
 while IFS= read -r -d '' source_path; do
   relative_path="${source_path#"$CONFIG_SOURCE"/}"
   path_has_excluded_config_directory "$relative_path" && continue
+  case "${relative_path##*/}" in
+    .env | .git) continue ;;
+  esac
   filename_lower="$(
     printf '%s' "${relative_path##*/}" | tr '[:upper:]' '[:lower:]'
   )"
   case "$filename_lower" in
-    .env | *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
+    *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
   esac
   destination="$BUNDLE_DIR/config/$relative_path"
   mkdir -p "$(dirname "$destination")"

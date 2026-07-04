@@ -211,6 +211,8 @@ JSON
 cat >"$BUNDLE_CONFIG_DIR/plaintext-safe.txt" <<'TEXT'
 token = ""
 token=${ENV_TOKEN}
+export TOKEN=""
+export TOKEN=${ENV_EXPORTED_TOKEN}
 bot_token=
 access_token='${ENV_ACCESS_TOKEN}'
 secret_access_key=''
@@ -495,6 +497,24 @@ if grep -Fq 'json-webhook-secret' "$BUNDLE_LOG"; then
 fi
 rm "$BUNDLE_CONFIG_DIR/json-pattern.json"
 
+for hook_fixture in slack feishu generic; do
+  case "$hook_fixture" in
+    slack) hook_url='https://hooks.slack.com/services/T000/B000/SLACKSECRET' ;;
+    feishu) hook_url='https://open.feishu.cn/open-apis/bot/v2/hook/FEISHUSECRET' ;;
+    generic) hook_url='https://example.test/hook/GENERICSECRET' ;;
+  esac
+  printf 'metadata = "%s"\n' "$hook_url" > \
+    "$BUNDLE_CONFIG_DIR/$hook_fixture-hook.txt"
+  if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+    "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+    fail "bundle_${hook_fixture}_hook_fixture_succeeded"
+  fi
+  if grep -Fq "$hook_url" "$BUNDLE_LOG"; then
+    fail "bundle_${hook_fixture}_hook_value_logged"
+  fi
+  rm "$BUNDLE_CONFIG_DIR/$hook_fixture-hook.txt"
+done
+
 printf '%s\n' '{"token": "null"}' > \
   "$BUNDLE_CONFIG_DIR/json-string-null.json"
 if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
@@ -540,6 +560,30 @@ if grep -Fq 'plain-text-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_plaintext_secret_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/plaintext-secret.txt"
+
+printf '%s\n' 'export TOKEN="exported-plain-secret-value"' > \
+  "$BUNDLE_CONFIG_DIR/exported-secret.txt"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_exported_secret_fixture_succeeded'
+fi
+if grep -Fq 'exported-plain-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_exported_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/exported-secret.txt"
+
+printf '\xff\xfet\x00o\x00k\x00e\x00n\x00=\x00u\x00t\x00f\x001\x006\x00-\x00s\x00e\x00c\x00r\x00e\x00t\x00' > \
+  "$BUNDLE_CONFIG_DIR/encoded-config.txt"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_non_utf8_fixture_succeeded'
+fi
+grep -Fq 'unreadable_or_non_utf8:encoded-config.txt' "$BUNDLE_LOG" ||
+  fail 'bundle_non_utf8_filename_missing'
+if grep -Fq 'utf16-secret' "$BUNDLE_LOG"; then
+  fail 'bundle_non_utf8_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/encoded-config.txt"
 
 for compound_field in bot_token access_token secret_access_key; do
   compound_value="${compound_field}-plaintext-value"

@@ -40,7 +40,8 @@ credential_patterns = (
         r'(?i)\b(?:gh[opusr]_[a-z0-9]{12,}|github_pat_[a-z0-9_]{12,})'
     )),
     ('webhook_url_pattern', re.compile(
-        r'(?i)https?://[^\s"\'<>]*(?:webhook|hooks/)[^\s"\'<>]*'
+        r'(?i)https?://[^\s"\'<>]*(?:hooks[.]slack[.]com/services/'
+        r'|/bot/v2/hook/|/hooks?/|webhook)[^\s"\'<>]*'
     )),
 )
 
@@ -164,7 +165,8 @@ if filter_method != 'keyword':
     sys.exit(1)
 
 assignment_pattern = re.compile(
-    r'^\s*(?P<field>[A-Za-z_][A-Za-z0-9_-]*)\s*[:=]\s*(?P<value>.*?)\s*$'
+    r'^\s*(?:export[ \t]+)?(?P<field>[A-Za-z_][A-Za-z0-9_-]*)'
+    r'\s*[:=]\s*(?P<value>.*?)\s*$'
 )
 
 for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
@@ -180,7 +182,11 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
             with open(path, encoding='utf-8') as handle:
                 content = handle.read()
         except (UnicodeDecodeError, OSError):
-            continue
+            print(
+                f'bundle_build=failed reason=unreadable_or_non_utf8:{relative}',
+                file=sys.stderr,
+            )
+            sys.exit(1)
         for label, pattern in credential_patterns:
             if pattern.search(content):
                 print(

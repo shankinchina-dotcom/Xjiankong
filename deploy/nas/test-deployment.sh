@@ -93,6 +93,13 @@ require_nginx_selector directories \
 require_nginx_selector databases \
   '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\\[.]\(db\|sqlite\|sqlite3\)[$][[:space:]]*\{'
 
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
+
+if [[ "$MODE" == '--static' ]]; then
+  printf 'nas_static=passed\n'
+  exit 0
+fi
+
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nas-deployment-test.XXXXXX")"
 CONFIG_DIR="$TEMP_DIR/config"
 OUTPUT_DIR="$TEMP_DIR/output"
@@ -109,13 +116,6 @@ cleanup() {
   rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
-
-"${COMPOSE[@]}" config >/dev/null
-
-if [[ "$MODE" == '--static' ]]; then
-  printf 'nas_static=passed\n'
-  exit 0
-fi
 
 mkdir -p \
   "$OUTPUT_DIR/html/2026-07-04" \

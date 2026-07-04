@@ -178,7 +178,7 @@ credentials:
   - token: ""
   - token: ${BUNDLE_TOKEN}
 metadata:
-  access_token_extra: retained-nonsecret-value
+  max_tokens: retained-nonsecret-value
 nullable_credentials:
   token:
   next_key: same-level-value
@@ -210,6 +210,10 @@ cat >"$BUNDLE_CONFIG_DIR/multiline-safe.json" <<'JSON'
 JSON
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
+for uppercase_extension in DB SQLITE SQLITE3; do
+  printf '%s\n' 'token: uppercase-database-secret-value' > \
+    "$BUNDLE_CONFIG_DIR/archive.$uppercase_extension"
+done
 mkdir -p "$BUNDLE_CONFIG_DIR/output"
 printf '%s\n' 'historical report' >"$BUNDLE_CONFIG_DIR/output/history.html"
 for cache_dir in .pytest_cache .mypy_cache .ruff_cache; do
@@ -234,8 +238,13 @@ if find "$BUNDLE_DIST_DIR/trendradar-nas" -type f \
   grep -q .; then
   fail 'bundle_contains_forbidden_file'
 fi
+for uppercase_extension in DB SQLITE SQLITE3; do
+  [[ ! -e \
+    "$BUNDLE_DIST_DIR/trendradar-nas/config/archive.$uppercase_extension" ]] ||
+    fail "bundle_contains_uppercase_database:$uppercase_extension"
+done
 if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
-  grep -Eq '(^|/)([.]env|[^/]+[.](db|sqlite|sqlite3))$'; then
+  grep -Eiq '(^|/)([.]env|[^/]+[.](db|sqlite|sqlite3))$'; then
   fail 'bundle_archive_contains_forbidden_file'
 fi
 if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
@@ -367,6 +376,74 @@ if grep -Fq 'null' "$BUNDLE_LOG"; then
   fail 'bundle_block_null_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/block-scalar.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/explicit-key.yaml" <<'YAML'
+credentials:
+  ? token
+  : explicit-key-secret-value
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_explicit_key_fixture_succeeded'
+fi
+if grep -Fq 'explicit-key-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_explicit_key_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/explicit-key.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/unicode-key.yaml" <<'YAML'
+credentials:
+  "\u0074oken": unicode-key-secret-value
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_unicode_key_fixture_succeeded'
+fi
+if grep -Fq 'unicode-key-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_unicode_key_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/unicode-key.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/duplicate-key.yaml" <<'YAML'
+credentials:
+  token: duplicate-yaml-secret-value
+  token: ""
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_duplicate_yaml_key_fixture_succeeded'
+fi
+if grep -Fq 'duplicate-yaml-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_duplicate_yaml_key_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/duplicate-key.yaml"
+
+printf '%s\n' 'credentials: [invalid-yaml-secret-value' > \
+  "$BUNDLE_CONFIG_DIR/invalid-config.yaml"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_invalid_yaml_fixture_succeeded'
+fi
+if grep -Fq 'invalid-yaml-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_invalid_yaml_value_logged'
+fi
+grep -Fq 'invalid_yaml:invalid-config.yaml' "$BUNDLE_LOG" ||
+  fail 'bundle_invalid_yaml_filename_missing'
+rm "$BUNDLE_CONFIG_DIR/invalid-config.yaml"
+
+for compound_field in bot_token secret_access_key access_token; do
+  compound_value="${compound_field}-secret-value"
+  printf 'credentials:\n  %s: %s\n' "$compound_field" "$compound_value" > \
+    "$BUNDLE_CONFIG_DIR/$compound_field.yaml"
+  if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+    "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+    fail "bundle_${compound_field}_fixture_succeeded"
+  fi
+  if grep -Fq "$compound_value" "$BUNDLE_LOG"; then
+    fail "bundle_${compound_field}_value_logged"
+  fi
+  rm "$BUNDLE_CONFIG_DIR/$compound_field.yaml"
+done
 
 cat >"$BUNDLE_CONFIG_DIR/json-secret.json" <<'JSON'
 {

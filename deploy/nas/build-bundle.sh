@@ -22,6 +22,7 @@ require_nonempty() {
 require_nonempty "$CONFIG_SOURCE/config.yaml"
 require_nonempty "$CONFIG_SOURCE/frequency_words.txt"
 command -v python3 >/dev/null 2>&1 || fail 'python3_not_found'
+command -v ruby >/dev/null 2>&1 || fail 'ruby_not_found'
 
 python3 - "$CONFIG_SOURCE" <<'PY'
 import json
@@ -32,7 +33,7 @@ import sys
 config_root = os.path.realpath(sys.argv[1])
 excluded_names = {'.env'}
 excluded_suffixes = ('.db', '.sqlite', '.sqlite3', '.pyc')
-secret_fields = {'api_key', 'webhook_url', 'token', 'secret', 'password'}
+exact_secret_fields = {'api_key', 'webhook_url', 'token', 'secret', 'password'}
 credential_patterns = (
     ('api_key_pattern', re.compile(r'(?i)\bsk-[a-z0-9_-]{8,}')),
     ('github_token_pattern', re.compile(
@@ -84,14 +85,16 @@ def is_env_placeholder(value):
     return re.fullmatch(r'\$\{[A-Za-z_][A-Za-z0-9_]*\}', value) is not None
 
 
-def is_allowed_yaml_scalar(raw_value):
-    value = strip_comment(raw_value).strip().rstrip(',').strip()
-    if not value:
+def normalized_field(value):
+    return value.lower().replace('-', '_')
+
+
+def is_secret_field(field):
+    if field in exact_secret_fields:
         return True
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-        quoted_value = value[1:-1]
-        return not quoted_value or is_env_placeholder(quoted_value)
-    return value.lower() in ('null', '~') or is_env_placeholder(value)
+    if 'api_key' in field or 'webhook_url' in field:
+        return True
+    return any(word in {'token', 'secret', 'password'} for word in field.split('_'))
 
 
 def is_allowed_json_value(value):
@@ -115,26 +118,13 @@ class JsonPairs(list):
 def check_json_value(value, relative):
     if isinstance(value, JsonPairs):
         for key, child in value:
-            field = key.lower()
-            if field in secret_fields and not is_allowed_json_value(child):
+            field = normalized_field(key)
+            if is_secret_field(field) and not is_allowed_json_value(child):
                 fail_secret(relative, field)
             check_json_value(child, relative)
     elif isinstance(value, list):
         for child in value:
             check_json_value(child, relative)
-
-
-def multiline_values(lines, line_index, key_column):
-    values = []
-    for following_line in lines[line_index + 1:]:
-        clean_following = strip_comment(following_line)
-        if not clean_following.strip():
-            continue
-        following_indent = len(clean_following) - len(clean_following.lstrip())
-        if following_indent <= key_column:
-            break
-        values.append(clean_following.strip())
-    return values
 
 
 config_path = os.path.join(config_root, 'config.yaml')
@@ -163,14 +153,6 @@ if filter_method != 'keyword':
     print('bundle_build=failed reason=config_filter_method_not_keyword', file=sys.stderr)
     sys.exit(1)
 
-field_pattern = re.compile(
-    r'(?<![A-Za-z0-9_])\s*["\']?'
-    r'(?P<field>api_key|webhook_url|token|secret|password)["\']?\s*:\s*'
-    r'(?P<value>\$\{[A-Za-z_][A-Za-z0-9_]*\}'
-    r'|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[^,}#]*)',
-    re.IGNORECASE,
-)
-
 for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
     dirnames[:] = [name for name in dirnames if not is_excluded_directory(name)]
     for filename in filenames:
@@ -195,42 +177,9 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 )
                 sys.exit(1)
             check_json_value(json_value, relative)
-            for label, pattern in credential_patterns:
-                if pattern.search(content):
-                    print(
-                        f'bundle_build=failed reason={label}:{relative}',
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
             continue
-        lines = content.splitlines()
-        for line_index, line in enumerate(lines):
-            clean_line = strip_comment(line)
-            for match in field_pattern.finditer(clean_line):
-                field = match.group('field').lower()
-                raw_value = match.group('value').strip()
-                if field not in secret_fields:
-                    continue
-                if raw_value in ('|', '>', '|-', '|+', '>-', '>+'):
-                    block_values = multiline_values(
-                        lines, line_index, match.start('field')
-                    )
-                    if len(block_values) > 1 or (
-                        block_values and not is_env_placeholder(block_values[0])
-                    ):
-                        fail_secret(relative, field)
-                    continue
-                if not raw_value:
-                    nested_values = multiline_values(
-                        lines, line_index, match.start('field')
-                    )
-                    if len(nested_values) > 1 or (
-                        nested_values and not is_allowed_yaml_scalar(nested_values[0])
-                    ):
-                        fail_secret(relative, field)
-                    continue
-                if not is_allowed_yaml_scalar(raw_value):
-                    fail_secret(relative, field)
+        if relative.lower().endswith(('.yaml', '.yml')):
+            continue
         for label, pattern in credential_patterns:
             if pattern.search(content):
                 print(
@@ -239,6 +188,98 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 )
                 sys.exit(1)
 PY
+
+ruby -rpsych - "$CONFIG_SOURCE" <<'RUBY'
+config_root = File.realpath(ARGV.fetch(0))
+excluded_names = ['.env'].freeze
+excluded_suffixes = ['.db', '.sqlite', '.sqlite3', '.pyc'].freeze
+exact_secret_fields = %w[api_key webhook_url token secret password].freeze
+block_styles = [
+  Psych::Nodes::Scalar::LITERAL,
+  Psych::Nodes::Scalar::FOLDED
+].freeze
+env_pattern = /\A\$\{[A-Za-z_][A-Za-z0-9_]*\}\z/
+
+def excluded_directory?(name)
+  ['.git', 'output', '__pycache__', 'cache', '.tox', '.nox'].include?(name) ||
+    name.end_with?('_cache', '.cache')
+end
+
+def normalized_field(value)
+  value.downcase.tr('-', '_')
+end
+
+def secret_field?(field, exact_secret_fields)
+  return true if exact_secret_fields.include?(field)
+  return true if field.include?('api_key') || field.include?('webhook_url')
+
+  field.split('_').any? { |word| %w[token secret password].include?(word) }
+end
+
+def allowed_sensitive_value?(node, block_styles, env_pattern)
+  if node.is_a?(Psych::Nodes::Scalar)
+    value = node.value
+    return true if value.empty?
+    if block_styles.include?(node.style)
+      block_value = value.sub(/\n+\z/, '')
+      return block_value.empty? || env_pattern.match?(block_value)
+    end
+    return true if env_pattern.match?(value)
+    return node.plain && node.tag.nil? && %w[null ~].include?(value.downcase)
+  end
+  if node.is_a?(Psych::Nodes::Mapping) || node.is_a?(Psych::Nodes::Sequence)
+    return Array(node.children).empty?
+  end
+
+  false
+end
+
+def fail_secret(relative, field)
+  warn "bundle_build=failed reason=secret_field:#{relative}:#{field}"
+  exit 1
+end
+
+def visit_yaml(node, relative, exact_secret_fields, block_styles, env_pattern)
+  return if node.nil?
+
+  if node.is_a?(Psych::Nodes::Mapping)
+    Array(node.children).each_slice(2) do |key, value|
+      if key.is_a?(Psych::Nodes::Scalar)
+        field = normalized_field(key.value)
+        if secret_field?(field, exact_secret_fields) &&
+           !allowed_sensitive_value?(value, block_styles, env_pattern)
+          fail_secret(relative, field)
+        end
+      end
+      visit_yaml(key, relative, exact_secret_fields, block_styles, env_pattern)
+      visit_yaml(value, relative, exact_secret_fields, block_styles, env_pattern)
+    end
+  else
+    Array(node.respond_to?(:children) ? node.children : nil).each do |child|
+      visit_yaml(child, relative, exact_secret_fields, block_styles, env_pattern)
+    end
+  end
+end
+
+Dir.glob(File.join(config_root, '**', '*'), File::FNM_DOTMATCH).sort.each do |path|
+  relative = path.delete_prefix("#{config_root}/")
+  components = relative.split(File::SEPARATOR)
+  next if components[0...-1].any? { |name| excluded_directory?(name) }
+  next unless File.file?(path) && !File.symlink?(path)
+  filename = File.basename(path)
+  next if excluded_names.include?(filename)
+  next if excluded_suffixes.any? { |suffix| filename.downcase.end_with?(suffix) }
+  next unless ['.yaml', '.yml'].include?(File.extname(filename).downcase)
+
+  begin
+    ast = Psych.parse_stream(File.read(path, encoding: 'UTF-8'), relative)
+  rescue Psych::SyntaxError, ArgumentError
+    warn "bundle_build=failed reason=invalid_yaml:#{relative}"
+    exit 1
+  end
+  visit_yaml(ast, relative, exact_secret_fields, block_styles, env_pattern)
+end
+RUBY
 
 mkdir -p "$DIST_ROOT"
 STAGING_DIR="$(mktemp -d "$DIST_ROOT/.${BUNDLE_NAME}.build.XXXXXX")"
@@ -310,7 +351,10 @@ path_has_excluded_config_directory() {
 while IFS= read -r -d '' source_path; do
   relative_path="${source_path#"$CONFIG_SOURCE"/}"
   path_has_excluded_config_directory "$relative_path" && continue
-  case "${relative_path##*/}" in
+  filename_lower="$(
+    printf '%s' "${relative_path##*/}" | tr '[:upper:]' '[:lower:]'
+  )"
+  case "$filename_lower" in
     .env | *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
   esac
   destination="$BUNDLE_DIR/config/$relative_path"

@@ -152,8 +152,11 @@ OUTPUT_DIR="$TEMP_DIR/output"
 BUNDLE_CONFIG_DIR="$TEMP_DIR/bundle-config"
 BUNDLE_DIST_DIR="$TEMP_DIR/bundle-dist"
 BUNDLE_LOG="$TEMP_DIR/build-bundle.log"
+FAKE_BIN="$TEMP_DIR/fake-bin"
+MV_FAIL_STATE="$TEMP_DIR/mv-fail-state"
+SYSTEM_MV="$(command -v mv)"
 PROJECT_NAME="nas-deployment-test-$$"
-mkdir -p "$CONFIG_DIR" "$OUTPUT_DIR" "$BUNDLE_CONFIG_DIR"
+mkdir -p "$CONFIG_DIR" "$OUTPUT_DIR" "$BUNDLE_CONFIG_DIR" "$FAKE_BIN"
 
 COMPOSE=(
   env CONFIG_DIR="$CONFIG_DIR" OUTPUT_DIR="$OUTPUT_DIR"
@@ -171,11 +174,16 @@ filter:
   method: keyword
 ai:
   api_key: ""
+credentials:
+  - token: ""
+  - token: ${BUNDLE_TOKEN}
 YAML
 printf '%s\n' '[WORD_GROUPS]' >"$BUNDLE_CONFIG_DIR/frequency_words.txt"
 printf '%s\n' 'timeline: enabled' >"$BUNDLE_CONFIG_DIR/timeline.yaml"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
+mkdir -p "$BUNDLE_CONFIG_DIR/output"
+printf '%s\n' 'historical report' >"$BUNDLE_CONFIG_DIR/output/history.html"
 
 CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
   "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1 || fail 'bundle_safe_fixture_failed'
@@ -183,6 +191,8 @@ CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
 [[ -s "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" ]] || fail 'bundle_archive_missing'
 [[ -s "$BUNDLE_DIST_DIR/trendradar-nas/config/timeline.yaml" ]] ||
   fail 'bundle_config_incomplete'
+[[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/output" ]] ||
+  fail 'bundle_contains_historical_output'
 if find "$BUNDLE_DIST_DIR/trendradar-nas" -type f \
   \( -name '.env' -o -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) |
   grep -q .; then
@@ -192,6 +202,52 @@ if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
   grep -Eq '(^|/)([.]env|[^/]+[.](db|sqlite|sqlite3))$'; then
   fail 'bundle_archive_contains_forbidden_file'
 fi
+if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
+  grep -Fq 'trendradar-nas/config/output/'; then
+  fail 'bundle_archive_contains_historical_output'
+fi
+
+printf '%s\n' 'old directory marker' > \
+  "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt"
+OLD_ARCHIVE_CKSUM="$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")"
+cat >"$FAKE_BIN/mv" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+count=0
+if [[ -f "$MV_FAIL_STATE" ]]; then
+  read -r count <"$MV_FAIL_STATE"
+fi
+count=$((count + 1))
+printf '%s\n' "$count" >"$MV_FAIL_STATE"
+if [[ "$count" -eq 2 ]]; then
+  exit 73
+fi
+exec "$REAL_MV" "$@"
+SH
+chmod +x "$FAKE_BIN/mv"
+if PATH="$FAKE_BIN:$PATH" MV_FAIL_STATE="$MV_FAIL_STATE" \
+  REAL_MV="$SYSTEM_MV" CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" \
+  DIST_ROOT="$BUNDLE_DIST_DIR" "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_publish_failure_fixture_succeeded'
+fi
+grep -Fq 'old directory marker' \
+  "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt" ||
+  fail 'bundle_publish_failure_lost_old_directory'
+[[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
+  fail 'bundle_publish_failure_changed_old_archive'
+
+cat >"$BUNDLE_CONFIG_DIR/list-secret.yaml" <<'YAML'
+credentials:
+  - token: plain-secret-value
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_list_secret_fixture_succeeded'
+fi
+if grep -Fq 'plain-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_list_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/list-secret.yaml"
 
 printf '%s\n' 'api_key: "test-secret-value"' >>"$BUNDLE_CONFIG_DIR/config.yaml"
 if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \

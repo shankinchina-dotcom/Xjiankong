@@ -30,7 +30,7 @@ import sys
 
 config_root = os.path.realpath(sys.argv[1])
 excluded_names = {'.env'}
-excluded_dirs = {'.git', '.cache', '__pycache__', 'cache'}
+excluded_dirs = {'.git', '.cache', '__pycache__', 'cache', 'output'}
 excluded_suffixes = ('.db', '.sqlite', '.sqlite3', '.pyc')
 secret_fields = {'api_key', 'webhook_url', 'token', 'secret', 'password'}
 credential_patterns = (
@@ -105,7 +105,7 @@ if filter_method != 'keyword':
     sys.exit(1)
 
 field_pattern = re.compile(
-    r'^\s*[,{]?\s*["\']?(api_key|webhook_url|token|secret|password)'
+    r'^\s*(?:[-,{]\s*)?["\']?(api_key|webhook_url|token|secret|password)'
     r'["\']?\s*:\s*(.*?)\s*$' ,
     re.IGNORECASE,
 )
@@ -148,12 +148,40 @@ mkdir -p "$DIST_ROOT"
 STAGING_DIR="$(mktemp -d "$DIST_ROOT/.${BUNDLE_NAME}.build.XXXXXX")"
 PREVIOUS_DIR="$DIST_ROOT/.${BUNDLE_NAME}.previous.$$"
 PREVIOUS_ARCHIVE="$DIST_ROOT/.${BUNDLE_NAME}.tar.gz.previous.$$"
+PUBLISH_COMMITTED=false
+DIR_PUBLISH_STARTED=false
+ARCHIVE_PUBLISH_STARTED=false
 
 cleanup() {
-  rm -rf "$STAGING_DIR" "$PREVIOUS_DIR"
-  rm -f "$PREVIOUS_ARCHIVE"
+  local exit_status="$?"
+
+  trap - EXIT HUP INT TERM
+  set +e
+  if [[ "$PUBLISH_COMMITTED" != 'true' ]]; then
+    if [[ -e "$PREVIOUS_DIR" ]]; then
+      rm -rf "$FINAL_DIR"
+      mv "$PREVIOUS_DIR" "$FINAL_DIR"
+    elif [[ "$DIR_PUBLISH_STARTED" == 'true' ]]; then
+      rm -rf "$FINAL_DIR"
+    fi
+
+    if [[ -e "$PREVIOUS_ARCHIVE" ]]; then
+      rm -f "$FINAL_ARCHIVE"
+      mv "$PREVIOUS_ARCHIVE" "$FINAL_ARCHIVE"
+    elif [[ "$ARCHIVE_PUBLISH_STARTED" == 'true' ]]; then
+      rm -f "$FINAL_ARCHIVE"
+    fi
+  else
+    rm -rf "$PREVIOUS_DIR"
+    rm -f "$PREVIOUS_ARCHIVE"
+  fi
+  rm -rf "$STAGING_DIR"
+  exit "$exit_status"
 }
 trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 BUNDLE_DIR="$STAGING_DIR/$BUNDLE_NAME"
 mkdir -p "$BUNDLE_DIR/config" "$BUNDLE_DIR/output"
@@ -165,7 +193,7 @@ cp "$SCRIPT_DIR/README.md" "$BUNDLE_DIR/README.md"
 while IFS= read -r -d '' source_path; do
   relative_path="${source_path#"$CONFIG_SOURCE"/}"
   case "/$relative_path/" in
-    */.git/* | */.cache/* | */__pycache__/* | */cache/*) continue ;;
+    */.git/* | */.cache/* | */__pycache__/* | */cache/* | */output/*) continue ;;
   esac
   case "${relative_path##*/}" in
     .env | *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
@@ -184,18 +212,11 @@ if [[ -e "$FINAL_ARCHIVE" ]]; then
   mv "$FINAL_ARCHIVE" "$PREVIOUS_ARCHIVE"
 fi
 
-if ! mv "$BUNDLE_DIR" "$FINAL_DIR"; then
-  [[ ! -e "$PREVIOUS_DIR" ]] || mv "$PREVIOUS_DIR" "$FINAL_DIR"
-  [[ ! -e "$PREVIOUS_ARCHIVE" ]] || mv "$PREVIOUS_ARCHIVE" "$FINAL_ARCHIVE"
-  fail 'publish_directory_failed'
-fi
-if ! mv "$STAGING_DIR/$BUNDLE_NAME.tar.gz" "$FINAL_ARCHIVE"; then
-  rm -rf "$FINAL_DIR"
-  [[ ! -e "$PREVIOUS_DIR" ]] || mv "$PREVIOUS_DIR" "$FINAL_DIR"
-  [[ ! -e "$PREVIOUS_ARCHIVE" ]] || mv "$PREVIOUS_ARCHIVE" "$FINAL_ARCHIVE"
+DIR_PUBLISH_STARTED=true
+mv "$BUNDLE_DIR" "$FINAL_DIR" || fail 'publish_directory_failed'
+ARCHIVE_PUBLISH_STARTED=true
+mv "$STAGING_DIR/$BUNDLE_NAME.tar.gz" "$FINAL_ARCHIVE" ||
   fail 'publish_archive_failed'
-fi
 
-rm -rf "$PREVIOUS_DIR"
-rm -f "$PREVIOUS_ARCHIVE"
+PUBLISH_COMMITTED=true
 printf 'bundle_build=passed output=%s\n' "$FINAL_ARCHIVE"

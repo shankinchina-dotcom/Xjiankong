@@ -81,8 +81,20 @@ require_rejected_status() {
   local status
 
   status="$(http_status "$path")"
-  [[ "$status" == '403' || "$status" == '404' ]] ||
+  [[ "$status" == '404' ]] ||
     fail "sensitive_path_status:/$path:${status:-missing}"
+}
+
+require_body_absent() {
+  local path="$1"
+  local forbidden="$2"
+  local body
+
+  body="$(
+    "${COMPOSE[@]}" exec -T report-web \
+      wget -qO- "http://127.0.0.1/$path" 2>/dev/null || true
+  )"
+  [[ "$body" != *"$forbidden"* ]] || fail "sensitive_body_exposed:/$path"
 }
 
 case "$MODE" in
@@ -160,6 +172,7 @@ printf '%s\n' 'private news database' >"$OUTPUT_DIR/news/private.db"
 printf '%s\n' 'private rss database' >"$OUTPUT_DIR/rss/private.db"
 printf '%s\n' 'private metadata database' >"$OUTPUT_DIR/meta/private.db"
 printf '%s\n' 'private config database' >"$OUTPUT_DIR/config/private.sqlite"
+printf '%s\n' 'private YAML configuration' >"$OUTPUT_DIR/config/private.yaml"
 printf '%s\n' 'private HTML text' >"$OUTPUT_DIR/html/private.txt"
 printf '%s\n' 'private HTML settings' >"$OUTPUT_DIR/html/settings.ini"
 printf '%s\n' 'private hidden HTML' >"$OUTPUT_DIR/html/.private.html"
@@ -169,6 +182,8 @@ printf '%s\n' 'private disguised database' >"$OUTPUT_DIR/html/private.db.html"
 printf '%s\n' 'private disguised environment' >"$OUTPUT_DIR/html/private.env.HTML"
 printf '%s\n' 'private environment fixture' >"$OUTPUT_DIR/.env"
 printf '%s\n' 'private undeclared fixture' >"$OUTPUT_DIR/private.txt"
+ln -s ../news/private.db "$OUTPUT_DIR/html/database.html"
+ln -s ../config/private.yaml "$OUTPUT_DIR/html/config.html"
 
 "${COMPOSE[@]}" up -d --no-deps report-web >/dev/null
 
@@ -196,9 +211,14 @@ for path in \
   html/private.sqlite3 \
   html/private.db.html \
   html/private.env.HTML \
+  html/database.html \
+  html/config.html \
   .env \
   private.txt; do
   require_rejected_status "$path"
 done
+
+require_body_absent html/database.html 'private news database'
+require_body_absent html/config.html 'private YAML configuration'
 
 printf 'nas_integration=passed\n'

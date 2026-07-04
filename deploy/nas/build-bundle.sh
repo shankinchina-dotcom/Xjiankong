@@ -24,8 +24,8 @@ require_nonempty "$CONFIG_SOURCE/frequency_words.txt"
 command -v python3 >/dev/null 2>&1 || fail 'python3_not_found'
 
 python3 - "$CONFIG_SOURCE" <<'PY'
-import os
 import json
+import os
 import re
 import sys
 
@@ -80,10 +80,24 @@ def scalar_value(value):
     return value
 
 
-def is_allowed_empty_or_env(value):
-    if value.lower() in ('', 'null', '~'):
-        return True
+def is_env_placeholder(value):
     return re.fullmatch(r'\$\{[A-Za-z_][A-Za-z0-9_]*\}', value) is not None
+
+
+def is_allowed_yaml_scalar(raw_value):
+    value = strip_comment(raw_value).strip().rstrip(',').strip()
+    if not value:
+        return True
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        quoted_value = value[1:-1]
+        return not quoted_value or is_env_placeholder(quoted_value)
+    return value.lower() in ('null', '~') or is_env_placeholder(value)
+
+
+def is_allowed_json_value(value):
+    return value is None or (
+        isinstance(value, str) and (not value or is_env_placeholder(value))
+    )
 
 
 def fail_secret(relative, field):
@@ -94,15 +108,16 @@ def fail_secret(relative, field):
     sys.exit(1)
 
 
+class JsonPairs(list):
+    pass
+
+
 def check_json_value(value, relative):
-    if isinstance(value, dict):
-        for key, child in value.items():
+    if isinstance(value, JsonPairs):
+        for key, child in value:
             field = key.lower()
-            if field in secret_fields:
-                if child is None:
-                    continue
-                if not isinstance(child, str) or not is_allowed_empty_or_env(child.strip()):
-                    fail_secret(relative, field)
+            if field in secret_fields and not is_allowed_json_value(child):
+                fail_secret(relative, field)
             check_json_value(child, relative)
     elif isinstance(value, list):
         for child in value:
@@ -172,7 +187,7 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
             continue
         if relative.lower().endswith('.json'):
             try:
-                json_value = json.loads(content)
+                json_value = json.loads(content, object_pairs_hook=JsonPairs)
             except (json.JSONDecodeError, RecursionError):
                 print(
                     f'bundle_build=failed reason=invalid_json:{relative}',
@@ -194,17 +209,14 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
             for match in field_pattern.finditer(clean_line):
                 field = match.group('field').lower()
                 raw_value = match.group('value').strip()
-                value = scalar_value(raw_value)
                 if field not in secret_fields:
                     continue
-                if value in ('|', '>', '|-', '|+', '>-', '>+'):
+                if raw_value in ('|', '>', '|-', '|+', '>-', '>+'):
                     block_values = multiline_values(
                         lines, line_index, match.start('field')
                     )
                     if len(block_values) > 1 or (
-                        block_values and not is_allowed_empty_or_env(
-                            scalar_value(block_values[0])
-                        )
+                        block_values and not is_env_placeholder(block_values[0])
                     ):
                         fail_secret(relative, field)
                     continue
@@ -213,13 +225,11 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                         lines, line_index, match.start('field')
                     )
                     if len(nested_values) > 1 or (
-                        nested_values and not is_allowed_empty_or_env(
-                            scalar_value(nested_values[0])
-                        )
+                        nested_values and not is_allowed_yaml_scalar(nested_values[0])
                     ):
                         fail_secret(relative, field)
                     continue
-                if not is_allowed_empty_or_env(value):
+                if not is_allowed_yaml_scalar(raw_value):
                     fail_secret(relative, field)
         for label, pattern in credential_patterns:
             if pattern.search(content):

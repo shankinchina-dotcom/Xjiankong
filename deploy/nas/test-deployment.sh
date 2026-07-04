@@ -337,6 +337,37 @@ if grep -Fq 'nonempty-block-secret-value' "$BUNDLE_LOG"; then
 fi
 rm "$BUNDLE_CONFIG_DIR/block-secret.yaml"
 
+for fixture in quoted-null quoted-tilde; do
+  case "$fixture" in
+    quoted-null) quoted_value='"null"' ;;
+    quoted-tilde) quoted_value='"~"' ;;
+  esac
+  printf 'credentials:\n  token: %s\n' "$quoted_value" > \
+    "$BUNDLE_CONFIG_DIR/$fixture.yaml"
+  if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+    "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+    fail "bundle_${fixture}_fixture_succeeded"
+  fi
+  if grep -Fq "$quoted_value" "$BUNDLE_LOG"; then
+    fail "bundle_${fixture}_value_logged"
+  fi
+  rm "$BUNDLE_CONFIG_DIR/$fixture.yaml"
+done
+
+cat >"$BUNDLE_CONFIG_DIR/block-scalar.yaml" <<'YAML'
+credentials:
+  token: |
+    null
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_block_null_fixture_succeeded'
+fi
+if grep -Fq 'null' "$BUNDLE_LOG"; then
+  fail 'bundle_block_null_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/block-scalar.yaml"
+
 cat >"$BUNDLE_CONFIG_DIR/json-secret.json" <<'JSON'
 {
   "nested": {
@@ -352,6 +383,28 @@ if grep -Fq 'nonempty-json-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_json_secret_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/json-secret.json"
+
+printf '%s\n' '{"token": "null"}' > \
+  "$BUNDLE_CONFIG_DIR/json-string-null.json"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_json_string_null_fixture_succeeded'
+fi
+if grep -Fq '"null"' "$BUNDLE_LOG"; then
+  fail 'bundle_json_string_null_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/json-string-null.json"
+
+printf '%s\n' '{"token": "duplicate-json-secret-value", "token": ""}' > \
+  "$BUNDLE_CONFIG_DIR/json-duplicate-secret.json"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_json_duplicate_secret_fixture_succeeded'
+fi
+if grep -Fq 'duplicate-json-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_json_duplicate_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/json-duplicate-secret.json"
 
 printf '%s\n' '{"token": "invalid-json-secret-value"' > \
   "$BUNDLE_CONFIG_DIR/invalid-secret.json"

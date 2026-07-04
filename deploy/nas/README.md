@@ -60,14 +60,14 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
 1. 启动项目后，先在 Container Manager 确认三个容器都处于运行状态，且 `report-web` 健康检查通过。
 2. `IMMEDIATE_RUN=false` 表示创建或重启容器时不会立即采集。`AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 表示首次启动时 AI 分析与 AI 翻译都关闭；未确认前，cron 可继续采集，但不调用 AI。
 3. 先在保持两个 AI 开关都为 `false` 的状态下完成三个容器状态、无端口映射和公网页面安全检查。
-4. 首次付费 AI 验收前，必须再次获得老板对“本次单次付费 AI 调用”的明确批准。获得批准后，在 `xjiankong-trendradar` 容器的终端中执行：
+4. 首次付费 AI 验收前，必须再次获得老板明确批准一次人工采集；该运行可能因翻译分批和分析包含多次付费 AI API 请求。获得批准后，在 `xjiankong-trendradar` 容器的终端中执行：
 
    ```bash
    cd /app
    AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar
    ```
 
-5. 单次运行完成后，确认 `/volume1/docker/trendradar-nas/output/index.html` 存在并可读。
+5. 该次人工采集完成后，确认 `/volume1/docker/trendradar-nas/output/index.html` 存在并可读。
 6. 打开 `https://trend.shankluo.cc`，确认返回最新日报；打开 `https://trend.shankluo.cc/index.html` 应得到同一报告。
 7. 用浏览器或 `curl` 检查敏感路径，如 `/news/`，`/rss/`，`/config/`，`/.env` 和任意数据库文件，必须全部返回 `404`。
 8. 检查 `xjiankong-trendradar` 日志，确认 cron 已按每 4 小时的调度加载。

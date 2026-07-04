@@ -94,7 +94,7 @@ trend.shankluo.cc -> http://report-web:80
 - `config/` 以只读方式挂载，`output/` 以读写方式挂载。
 - 不发布内置 Web 端口。
 
-首次部署完成后，先保持 `AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 验收容器和公网边界。老板再次明确批准单次付费 AI 调用后，仅在该次容器命令中临时启用：
+首次部署完成后，先保持 `AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 验收容器和公网边界。老板必须再次明确批准一次人工采集；该运行可能因翻译分批和分析包含多次付费 AI API 请求。获得批准后，仅在该次容器命令中临时启用：
 
 ```bash
 AI_ANALYSIS_ENABLED=true AI_TRANSLATION_ENABLED=true python -m trendradar

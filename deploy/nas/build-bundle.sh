@@ -105,8 +105,10 @@ if filter_method != 'keyword':
     sys.exit(1)
 
 field_pattern = re.compile(
-    r'^\s*(?:[-,{]\s*)?["\']?(api_key|webhook_url|token|secret|password)'
-    r'["\']?\s*:\s*(.*?)\s*$' ,
+    r'(?:^|[-{,])\s*["\']?'
+    r'(?P<field>api_key|webhook_url|token|secret|password)["\']?\s*:\s*'
+    r'(?P<value>\$\{[A-Za-z_][A-Za-z0-9_]*\}'
+    r'|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[^,}#]*)',
     re.IGNORECASE,
 )
 
@@ -125,10 +127,10 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
         except (UnicodeDecodeError, OSError):
             continue
         for line in content.splitlines():
-            match = field_pattern.match(line)
-            if match:
-                field = match.group(1).lower()
-                value = scalar_value(match.group(2))
+            clean_line = strip_comment(line)
+            for match in field_pattern.finditer(clean_line):
+                field = match.group('field').lower()
+                value = scalar_value(match.group('value'))
                 if field in secret_fields and not is_allowed_empty_or_env(value):
                     print(
                         f'bundle_build=failed reason=secret_field:{relative}:{field}',

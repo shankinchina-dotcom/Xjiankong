@@ -236,6 +236,28 @@ grep -Fq 'old directory marker' \
 [[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
   fail 'bundle_publish_failure_changed_old_archive'
 
+printf '%s\n' '- {token: inline-leading-secret}' > \
+  "$BUNDLE_CONFIG_DIR/inline-secret.yaml"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_inline_leading_secret_fixture_succeeded'
+fi
+if grep -Fq 'inline-leading-secret' "$BUNDLE_LOG"; then
+  fail 'bundle_inline_leading_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/inline-secret.yaml"
+
+printf '%s\n' '- {name: x, "api_key": "inline-later-secret"}' > \
+  "$BUNDLE_CONFIG_DIR/inline-secret.yaml"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_inline_later_secret_fixture_succeeded'
+fi
+if grep -Fq 'inline-later-secret' "$BUNDLE_LOG"; then
+  fail 'bundle_inline_later_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/inline-secret.yaml"
+
 cat >"$BUNDLE_CONFIG_DIR/list-secret.yaml" <<'YAML'
 credentials:
   - token: plain-secret-value

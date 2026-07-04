@@ -105,7 +105,7 @@ if filter_method != 'keyword':
     sys.exit(1)
 
 field_pattern = re.compile(
-    r'(?:^|[-{,])\s*["\']?'
+    r'(?<![A-Za-z0-9_])\s*["\']?'
     r'(?P<field>api_key|webhook_url|token|secret|password)["\']?\s*:\s*'
     r'(?P<value>\$\{[A-Za-z_][A-Za-z0-9_]*\}'
     r'|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[^,}#]*)',

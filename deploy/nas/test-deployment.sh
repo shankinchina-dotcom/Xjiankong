@@ -177,6 +177,8 @@ ai:
 credentials:
   - token: ""
   - token: ${BUNDLE_TOKEN}
+metadata:
+  access_token_extra: retained-nonsecret-value
 YAML
 printf '%s\n' '[WORD_GROUPS]' >"$BUNDLE_CONFIG_DIR/frequency_words.txt"
 printf '%s\n' 'timeline: enabled' >"$BUNDLE_CONFIG_DIR/timeline.yaml"
@@ -257,6 +259,17 @@ if grep -Fq 'inline-later-secret' "$BUNDLE_LOG"; then
   fail 'bundle_inline_later_secret_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/inline-secret.yaml"
+
+printf '%s\n' 'credentials: [token: bracket-secret-value]' > \
+  "$BUNDLE_CONFIG_DIR/bracket-secret.yaml"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_bracket_secret_fixture_succeeded'
+fi
+if grep -Fq 'bracket-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_bracket_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/bracket-secret.yaml"
 
 cat >"$BUNDLE_CONFIG_DIR/list-secret.yaml" <<'YAML'
 credentials:

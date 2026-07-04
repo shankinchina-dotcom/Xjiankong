@@ -154,6 +154,7 @@ BUNDLE_DIST_DIR="$TEMP_DIR/bundle-dist"
 BUNDLE_LOG="$TEMP_DIR/build-bundle.log"
 FAKE_BIN="$TEMP_DIR/fake-bin"
 MV_FAIL_STATE="$TEMP_DIR/mv-fail-state"
+TEMPLATE_DIR="$TEMP_DIR/template-dir"
 SYSTEM_MV="$(command -v mv)"
 PROJECT_NAME="nas-deployment-test-$$"
 mkdir -p "$CONFIG_DIR" "$OUTPUT_DIR" "$BUNDLE_CONFIG_DIR" "$FAKE_BIN"
@@ -276,6 +277,71 @@ fi
 printf '%s\n' 'old directory marker' > \
   "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt"
 OLD_ARCHIVE_CKSUM="$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")"
+
+mkdir -p "$TEMPLATE_DIR"
+cp "$BUILD_BUNDLE_FILE" "$TEMPLATE_DIR/build-bundle.sh"
+cp "$COMPOSE_FILE" "$TEMPLATE_DIR/compose.yaml"
+cp "$ENV_FILE" "$TEMPLATE_DIR/.env.example"
+cp "$NGINX_FILE" "$TEMPLATE_DIR/nginx.conf"
+cp "$SCRIPT_DIR/README.md" "$TEMPLATE_DIR/README.md"
+printf '%s\n' 'export TOKEN=template-secret-value' >>"$TEMPLATE_DIR/README.md"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$TEMPLATE_DIR/build-bundle.sh" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_template_secret_fixture_succeeded'
+fi
+if grep -Fq 'template-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_template_secret_value_logged'
+fi
+grep -Fq 'old directory marker' \
+  "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt" ||
+  fail 'bundle_template_failure_lost_old_directory'
+[[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
+  fail 'bundle_template_failure_changed_old_archive'
+
+mkdir "$BUNDLE_DIST_DIR/.trendradar-nas.lock"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_lock_fixture_succeeded'
+fi
+grep -Fq 'bundle_locked' "$BUNDLE_LOG" || fail 'bundle_lock_reason_missing'
+rmdir "$BUNDLE_DIST_DIR/.trendradar-nas.lock"
+grep -Fq 'old directory marker' \
+  "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt" ||
+  fail 'bundle_lock_failure_lost_old_directory'
+[[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
+  fail 'bundle_lock_failure_changed_old_archive'
+
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" \
+  DIST_ROOT="$BUNDLE_CONFIG_DIR/nested-dist" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_overlapping_paths_fixture_succeeded'
+fi
+grep -Fq 'config_dist_overlap' "$BUNDLE_LOG" ||
+  fail 'bundle_overlapping_paths_reason_missing'
+rmdir "$BUNDLE_CONFIG_DIR/nested-dist"
+grep -Fq 'old directory marker' \
+  "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt" ||
+  fail 'bundle_overlap_failure_lost_old_directory'
+[[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
+  fail 'bundle_overlap_failure_changed_old_archive'
+
+cat >"$FAKE_BIN/find" <<'SH'
+#!/usr/bin/env bash
+exit 74
+SH
+chmod +x "$FAKE_BIN/find"
+if PATH="$FAKE_BIN:$PATH" CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" \
+  DIST_ROOT="$BUNDLE_DIST_DIR" "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_find_failure_fixture_succeeded'
+fi
+grep -Fq 'find_failed' "$BUNDLE_LOG" || fail 'bundle_find_failure_reason_missing'
+rm "$FAKE_BIN/find"
+grep -Fq 'old directory marker' \
+  "$BUNDLE_DIST_DIR/trendradar-nas/old-directory-marker.txt" ||
+  fail 'bundle_find_failure_lost_old_directory'
+[[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
+  fail 'bundle_find_failure_changed_old_archive'
+
 cat >"$FAKE_BIN/mv" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -483,7 +549,7 @@ fi
 if grep -Fq 'invalid-yaml-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_invalid_yaml_value_logged'
 fi
-grep -Fq 'invalid_yaml:invalid-config.yaml' "$BUNDLE_LOG" ||
+grep -Fq 'invalid_yaml:config/invalid-config.yaml' "$BUNDLE_LOG" ||
   fail 'bundle_invalid_yaml_filename_missing'
 rm "$BUNDLE_CONFIG_DIR/invalid-config.yaml"
 
@@ -592,7 +658,7 @@ fi
 if grep -Fq 'invalid-json-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_invalid_json_value_logged'
 fi
-grep -Fq 'invalid_json:invalid-secret.json' "$BUNDLE_LOG" ||
+grep -Fq 'invalid_json:config/invalid-secret.json' "$BUNDLE_LOG" ||
   fail 'bundle_invalid_json_filename_missing'
 rm "$BUNDLE_CONFIG_DIR/invalid-secret.json"
 
@@ -624,7 +690,7 @@ if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
   "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
   fail 'bundle_non_utf8_fixture_succeeded'
 fi
-grep -Fq 'unreadable_or_non_utf8:encoded-config.txt' "$BUNDLE_LOG" ||
+grep -Fq 'unreadable_or_non_utf8:config/encoded-config.txt' "$BUNDLE_LOG" ||
   fail 'bundle_non_utf8_filename_missing'
 if grep -Fq 'utf16-secret' "$BUNDLE_LOG"; then
   fail 'bundle_non_utf8_value_logged'
@@ -665,6 +731,13 @@ if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
 fi
 if grep -Fq 'test-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_secret_value_logged'
+fi
+if find "$BUNDLE_DIST_DIR" -maxdepth 1 \
+  \( -name '.trendradar-nas.lock' \
+    -o -name '.trendradar-nas.build.*' \
+    -o -name '.trendradar-nas.previous.*' \
+    -o -name '.trendradar-nas.tar.gz.previous.*' \) | grep -q .; then
+  fail 'bundle_temporary_artifact_left_behind'
 fi
 
 mkdir -p \

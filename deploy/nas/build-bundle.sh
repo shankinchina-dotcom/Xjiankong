@@ -6,8 +6,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_SOURCE="${CONFIG_SOURCE:-$REPO_ROOT/../TrendRadar/config}"
 DIST_ROOT="${DIST_ROOT:-$REPO_ROOT/dist}"
 BUNDLE_NAME='trendradar-nas'
-FINAL_DIR="$DIST_ROOT/$BUNDLE_NAME"
-FINAL_ARCHIVE="$DIST_ROOT/$BUNDLE_NAME.tar.gz"
 
 fail() {
   printf 'bundle_build=failed reason=%s\n' "$1" >&2
@@ -24,15 +22,131 @@ require_nonempty "$CONFIG_SOURCE/frequency_words.txt"
 command -v python3 >/dev/null 2>&1 || fail 'python3_not_found'
 command -v ruby >/dev/null 2>&1 || fail 'ruby_not_found'
 
-python3 - "$CONFIG_SOURCE" <<'PY'
+mkdir -p "$DIST_ROOT" || fail 'dist_root_create_failed'
+CONFIG_SOURCE="$(cd "$CONFIG_SOURCE" && pwd -P)"
+DIST_ROOT="$(cd "$DIST_ROOT" && pwd -P)"
+FINAL_DIR="$DIST_ROOT/$BUNDLE_NAME"
+FINAL_ARCHIVE="$DIST_ROOT/$BUNDLE_NAME.tar.gz"
+LOCK_DIR="$DIST_ROOT/.${BUNDLE_NAME}.lock"
+
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  fail 'bundle_locked'
+fi
+
+LOCK_HELD=true
+STAGING_DIR=''
+PREVIOUS_DIR="$DIST_ROOT/.${BUNDLE_NAME}.previous.$$"
+PREVIOUS_ARCHIVE="$DIST_ROOT/.${BUNDLE_NAME}.tar.gz.previous.$$"
+PUBLISH_COMMITTED=false
+DIR_PUBLISH_STARTED=false
+ARCHIVE_PUBLISH_STARTED=false
+
+cleanup() {
+  local exit_status="$?"
+
+  trap - EXIT HUP INT TERM
+  set +e
+  if [[ "$PUBLISH_COMMITTED" != 'true' ]]; then
+    if [[ -e "$PREVIOUS_DIR" ]]; then
+      rm -rf "$FINAL_DIR"
+      mv "$PREVIOUS_DIR" "$FINAL_DIR"
+    elif [[ "$DIR_PUBLISH_STARTED" == 'true' ]]; then
+      rm -rf "$FINAL_DIR"
+    fi
+
+    if [[ -e "$PREVIOUS_ARCHIVE" ]]; then
+      rm -f "$FINAL_ARCHIVE"
+      mv "$PREVIOUS_ARCHIVE" "$FINAL_ARCHIVE"
+    elif [[ "$ARCHIVE_PUBLISH_STARTED" == 'true' ]]; then
+      rm -f "$FINAL_ARCHIVE"
+    fi
+  else
+    rm -rf "$PREVIOUS_DIR"
+    rm -f "$PREVIOUS_ARCHIVE"
+  fi
+  if [[ -n "$STAGING_DIR" ]]; then
+    rm -rf "$STAGING_DIR"
+  fi
+  if [[ "$LOCK_HELD" == 'true' ]]; then
+    if ! rmdir "$LOCK_DIR" 2>/dev/null; then
+      printf 'bundle_build=failed reason=lock_release_failed\n' >&2
+      if [[ "$exit_status" -eq 0 ]]; then
+        exit_status=1
+      fi
+    fi
+  fi
+  exit "$exit_status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if [[ "$CONFIG_SOURCE" == "$DIST_ROOT" ]] ||
+  [[ "$CONFIG_SOURCE" == "$DIST_ROOT/"* ]] ||
+  [[ "$DIST_ROOT" == "$CONFIG_SOURCE/"* ]]; then
+  fail 'config_dist_overlap'
+fi
+
+STAGING_DIR="$(mktemp -d "$DIST_ROOT/.${BUNDLE_NAME}.build.XXXXXX")" ||
+  fail 'staging_create_failed'
+MANIFEST="$STAGING_DIR/config-manifest"
+BUNDLE_DIR="$STAGING_DIR/$BUNDLE_NAME"
+mkdir -p "$BUNDLE_DIR/config" "$BUNDLE_DIR/output" || fail 'staging_layout_failed'
+cp "$SCRIPT_DIR/compose.yaml" "$BUNDLE_DIR/compose.yaml" || fail 'template_copy_failed'
+cp "$SCRIPT_DIR/.env.example" "$BUNDLE_DIR/.env.example" || fail 'template_copy_failed'
+cp "$SCRIPT_DIR/nginx.conf" "$BUNDLE_DIR/nginx.conf" || fail 'template_copy_failed'
+cp "$SCRIPT_DIR/README.md" "$BUNDLE_DIR/README.md" || fail 'template_copy_failed'
+
+is_excluded_config_directory() {
+  local name="$1"
+
+  case "$name" in
+    .git | output | __pycache__ | cache | .tox | .nox | *_cache | *.cache) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+path_has_excluded_config_directory() {
+  local remaining="$1"
+  local component
+
+  while [[ "$remaining" == */* ]]; do
+    component="${remaining%%/*}"
+    is_excluded_config_directory "$component" && return 0
+    remaining="${remaining#*/}"
+  done
+  return 1
+}
+
+if ! find "$CONFIG_SOURCE" -type f -print0 >"$MANIFEST"; then
+  fail 'find_failed'
+fi
+
+while IFS= read -r -d '' source_path; do
+  relative_path="${source_path#"$CONFIG_SOURCE"/}"
+  path_has_excluded_config_directory "$relative_path" && continue
+  case "${relative_path##*/}" in
+    .env | .git) continue ;;
+  esac
+  filename_lower="$(
+    printf '%s' "${relative_path##*/}" | tr '[:upper:]' '[:lower:]'
+  )"
+  case "$filename_lower" in
+    *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
+  esac
+  destination="$BUNDLE_DIR/config/$relative_path"
+  mkdir -p "$(dirname "$destination")" || fail 'config_copy_failed'
+  cp -p "$source_path" "$destination" || fail 'config_copy_failed'
+done <"$MANIFEST"
+
+python3 - "$BUNDLE_DIR" <<'PY'
 import json
 import os
 import re
 import sys
 
 config_root = os.path.realpath(sys.argv[1])
-excluded_names = {'.env', '.git'}
-excluded_suffixes = ('.db', '.sqlite', '.sqlite3', '.pyc')
 exact_secret_fields = {'api_key', 'webhook_url', 'token', 'secret', 'password'}
 credential_patterns = (
     ('api_key_pattern', re.compile(r'(?i)\bsk-[a-z0-9_-]{8,}')),
@@ -44,14 +158,6 @@ credential_patterns = (
         r'|/bot/v2/hook/|/hooks?/|webhook)[^\s"\'<>]*'
     )),
 )
-
-
-def is_excluded_directory(name):
-    return (
-        name in {'.git', 'output', '__pycache__', 'cache', '.tox', '.nox'}
-        or name.endswith('_cache')
-        or name.endswith('.cache')
-    )
 
 
 def strip_comment(value):
@@ -76,7 +182,9 @@ def strip_comment(value):
 
 
 def is_env_placeholder(value):
-    return re.fullmatch(r'\$\{[A-Za-z_][A-Za-z0-9_]*\}', value) is not None
+    return re.fullmatch(
+        r'\$\{[A-Za-z_][A-Za-z0-9_]*(?::-)?\}', value
+    ) is not None
 
 
 def normalized_field(value):
@@ -137,10 +245,7 @@ assignment_pattern = re.compile(
 )
 
 for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
-    dirnames[:] = [name for name in dirnames if not is_excluded_directory(name)]
     for filename in filenames:
-        if filename in excluded_names or filename.lower().endswith(excluded_suffixes):
-            continue
         path = os.path.join(directory, filename)
         if os.path.islink(path):
             continue
@@ -185,21 +290,14 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 fail_secret(relative, field)
 PY
 
-ruby -rpsych - "$CONFIG_SOURCE" <<'RUBY'
+ruby -rpsych - "$BUNDLE_DIR" <<'RUBY'
 config_root = File.realpath(ARGV.fetch(0))
-excluded_names = ['.env', '.git'].freeze
-excluded_suffixes = ['.db', '.sqlite', '.sqlite3', '.pyc'].freeze
 exact_secret_fields = %w[api_key webhook_url token secret password].freeze
 block_styles = [
   Psych::Nodes::Scalar::LITERAL,
   Psych::Nodes::Scalar::FOLDED
 ].freeze
-env_pattern = /\A\$\{[A-Za-z_][A-Za-z0-9_]*\}\z/
-
-def excluded_directory?(name)
-  ['.git', 'output', '__pycache__', 'cache', '.tox', '.nox'].include?(name) ||
-    name.end_with?('_cache', '.cache')
-end
+env_pattern = /\A\$\{[A-Za-z_][A-Za-z0-9_]*(?::-)?\}\z/
 
 def normalized_field(value)
   value.downcase.tr('-', '_')
@@ -286,12 +384,8 @@ end
 
 Dir.glob(File.join(config_root, '**', '*'), File::FNM_DOTMATCH).sort.each do |path|
   relative = path.delete_prefix("#{config_root}/")
-  components = relative.split(File::SEPARATOR)
-  next if components[0...-1].any? { |name| excluded_directory?(name) }
   next unless File.file?(path) && !File.symlink?(path)
   filename = File.basename(path)
-  next if excluded_names.include?(filename)
-  next if excluded_suffixes.any? { |suffix| filename.downcase.end_with?(suffix) }
   next unless ['.yaml', '.yml'].include?(File.extname(filename).downcase)
 
   begin
@@ -300,96 +394,13 @@ Dir.glob(File.join(config_root, '**', '*'), File::FNM_DOTMATCH).sort.each do |pa
     warn "bundle_build=failed reason=invalid_yaml:#{relative}"
     exit 1
   end
-  validate_filter(ast, relative) if relative == 'config.yaml'
+  validate_filter(ast, relative) if relative == 'config/config.yaml'
   visit_yaml(ast, relative, exact_secret_fields, block_styles, env_pattern)
 end
 RUBY
 
-mkdir -p "$DIST_ROOT"
-STAGING_DIR="$(mktemp -d "$DIST_ROOT/.${BUNDLE_NAME}.build.XXXXXX")"
-PREVIOUS_DIR="$DIST_ROOT/.${BUNDLE_NAME}.previous.$$"
-PREVIOUS_ARCHIVE="$DIST_ROOT/.${BUNDLE_NAME}.tar.gz.previous.$$"
-PUBLISH_COMMITTED=false
-DIR_PUBLISH_STARTED=false
-ARCHIVE_PUBLISH_STARTED=false
-
-cleanup() {
-  local exit_status="$?"
-
-  trap - EXIT HUP INT TERM
-  set +e
-  if [[ "$PUBLISH_COMMITTED" != 'true' ]]; then
-    if [[ -e "$PREVIOUS_DIR" ]]; then
-      rm -rf "$FINAL_DIR"
-      mv "$PREVIOUS_DIR" "$FINAL_DIR"
-    elif [[ "$DIR_PUBLISH_STARTED" == 'true' ]]; then
-      rm -rf "$FINAL_DIR"
-    fi
-
-    if [[ -e "$PREVIOUS_ARCHIVE" ]]; then
-      rm -f "$FINAL_ARCHIVE"
-      mv "$PREVIOUS_ARCHIVE" "$FINAL_ARCHIVE"
-    elif [[ "$ARCHIVE_PUBLISH_STARTED" == 'true' ]]; then
-      rm -f "$FINAL_ARCHIVE"
-    fi
-  else
-    rm -rf "$PREVIOUS_DIR"
-    rm -f "$PREVIOUS_ARCHIVE"
-  fi
-  rm -rf "$STAGING_DIR"
-  exit "$exit_status"
-}
-trap cleanup EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-BUNDLE_DIR="$STAGING_DIR/$BUNDLE_NAME"
-mkdir -p "$BUNDLE_DIR/config" "$BUNDLE_DIR/output"
-cp "$SCRIPT_DIR/compose.yaml" "$BUNDLE_DIR/compose.yaml"
-cp "$SCRIPT_DIR/.env.example" "$BUNDLE_DIR/.env.example"
-cp "$SCRIPT_DIR/nginx.conf" "$BUNDLE_DIR/nginx.conf"
-cp "$SCRIPT_DIR/README.md" "$BUNDLE_DIR/README.md"
-
-is_excluded_config_directory() {
-  local name="$1"
-
-  case "$name" in
-    .git | output | __pycache__ | cache | .tox | .nox | *_cache | *.cache) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-path_has_excluded_config_directory() {
-  local remaining="$1"
-  local component
-
-  while [[ "$remaining" == */* ]]; do
-    component="${remaining%%/*}"
-    is_excluded_config_directory "$component" && return 0
-    remaining="${remaining#*/}"
-  done
-  return 1
-}
-
-while IFS= read -r -d '' source_path; do
-  relative_path="${source_path#"$CONFIG_SOURCE"/}"
-  path_has_excluded_config_directory "$relative_path" && continue
-  case "${relative_path##*/}" in
-    .env | .git) continue ;;
-  esac
-  filename_lower="$(
-    printf '%s' "${relative_path##*/}" | tr '[:upper:]' '[:lower:]'
-  )"
-  case "$filename_lower" in
-    *.db | *.sqlite | *.sqlite3 | *.pyc) continue ;;
-  esac
-  destination="$BUNDLE_DIR/config/$relative_path"
-  mkdir -p "$(dirname "$destination")"
-  cp -p "$source_path" "$destination"
-done < <(find "$CONFIG_SOURCE" -type f -print0)
-
-tar -czf "$STAGING_DIR/$BUNDLE_NAME.tar.gz" -C "$STAGING_DIR" "$BUNDLE_NAME"
+tar -czf "$STAGING_DIR/$BUNDLE_NAME.tar.gz" -C "$STAGING_DIR" "$BUNDLE_NAME" ||
+  fail 'archive_create_failed'
 
 if [[ -e "$FINAL_DIR" ]]; then
   mv "$FINAL_DIR" "$PREVIOUS_DIR"

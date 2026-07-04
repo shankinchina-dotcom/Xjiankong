@@ -93,7 +93,8 @@ STAGING_DIR="$(mktemp -d "$DIST_ROOT/.${BUNDLE_NAME}.build.XXXXXX")" ||
 MANIFEST="$STAGING_DIR/config-manifest"
 BUNDLE_DIR="$STAGING_DIR/$BUNDLE_NAME"
 mkdir -p "$BUNDLE_DIR/config" "$BUNDLE_DIR/output" || fail 'staging_layout_failed'
-cp "$SCRIPT_DIR/compose.yaml" "$BUNDLE_DIR/compose.yaml" || fail 'template_copy_failed'
+cp "$SCRIPT_DIR/docker-compose.yml" "$BUNDLE_DIR/docker-compose.yml" ||
+  fail 'template_copy_failed'
 cp "$SCRIPT_DIR/.env.example" "$BUNDLE_DIR/.env.example" || fail 'template_copy_failed'
 cp "$SCRIPT_DIR/nginx.conf" "$BUNDLE_DIR/nginx.conf" || fail 'template_copy_failed'
 cp "$SCRIPT_DIR/README.md" "$BUNDLE_DIR/README.md" || fail 'template_copy_failed'

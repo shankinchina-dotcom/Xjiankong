@@ -14,7 +14,7 @@
 
 | 路径 | 职责 |
 |---|---|
-| deploy/nas/compose.yaml | 三容器编排、内部网络、卷和调度 |
+| deploy/nas/docker-compose.yml | 三容器编排、内部网络、卷和调度 |
 | deploy/nas/.env.example | 无密钥环境变量和固定镜像 digest |
 | deploy/nas/nginx.conf | HTML 白名单与敏感路径拒绝 |
 | deploy/nas/test-deployment.sh | 静态检查和 Nginx 集成测试 |
@@ -69,7 +69,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:---static}"
-COMPOSE="$SCRIPT_DIR/compose.yaml"
+COMPOSE="$SCRIPT_DIR/docker-compose.yml"
 ENV_FILE="$SCRIPT_DIR/.env.example"
 NGINX_CONF="$SCRIPT_DIR/nginx.conf"
 
@@ -88,6 +88,7 @@ fi
 
 grep -q '0 \*/4 \* \* \*' "$ENV_FILE"
 grep -q '^IMMEDIATE_RUN=false$' "$ENV_FILE"
+grep -q '^AI_ANALYSIS_ENABLED=false$' "$ENV_FILE"
 grep -q '^AI_API_KEY=$' "$ENV_FILE"
 grep -q '^CLOUDFLARE_TUNNEL_TOKEN=$' "$ENV_FILE"
 grep -q 'location ~\* \^/(news|rss|meta|config)' "$NGINX_CONF"
@@ -151,7 +152,7 @@ chmod +x deploy/nas/test-deployment.sh
 bash deploy/nas/test-deployment.sh --static
 ~~~
 
-Expected: FAIL，错误以 missing: deploy/nas/compose.yaml 结束。
+Expected: FAIL，错误以 missing: deploy/nas/docker-compose.yml 结束。
 
 - [ ] **Step 4: 提交**
 
@@ -163,12 +164,12 @@ git commit -m "test: define NAS deployment checks"
 ### Task 2: 实现 Compose 和只读发布层
 
 **Files:**
-- Create: deploy/nas/compose.yaml
+- Create: deploy/nas/docker-compose.yml
 - Create: deploy/nas/.env.example
 - Create: deploy/nas/nginx.conf
 - Test: deploy/nas/test-deployment.sh
 
-- [ ] **Step 1: 创建 deploy/nas/compose.yaml**
+- [ ] **Step 1: 创建 deploy/nas/docker-compose.yml**
 
 ~~~yaml
 name: xjiankong
@@ -183,7 +184,7 @@ services:
       CRON_SCHEDULE: ${CRON_SCHEDULE:-0 */4 * * *}
       RUN_MODE: ${RUN_MODE:-cron}
       IMMEDIATE_RUN: ${IMMEDIATE_RUN:-false}
-      AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-true}
+      AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-deepseek/deepseek-chat}
       AI_API_BASE: ${AI_API_BASE:-}
@@ -236,7 +237,7 @@ TZ=Asia/Taipei
 CRON_SCHEDULE=0 */4 * * *
 RUN_MODE=cron
 IMMEDIATE_RUN=false
-AI_ANALYSIS_ENABLED=true
+AI_ANALYSIS_ENABLED=false
 AI_MODEL=deepseek/deepseek-chat
 AI_API_BASE=
 AI_API_KEY=
@@ -306,7 +307,7 @@ Expected: 分别输出 nas_static=passed 和 nas_integration=passed。
 - [ ] **Step 5: 提交**
 
 ~~~bash
-git add deploy/nas/compose.yaml deploy/nas/.env.example deploy/nas/nginx.conf
+git add deploy/nas/docker-compose.yml deploy/nas/.env.example deploy/nas/nginx.conf
 git commit -m "feat: add hardened NAS compose stack"
 ~~~
 
@@ -369,7 +370,7 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 mkdir -p "$TMP_DIR/$BUNDLE_NAME/config" "$TMP_DIR/$BUNDLE_NAME/output"
 
-cp "$SCRIPT_DIR/compose.yaml" "$TMP_DIR/$BUNDLE_NAME/compose.yaml"
+cp "$SCRIPT_DIR/docker-compose.yml" "$TMP_DIR/$BUNDLE_NAME/docker-compose.yml"
 cp "$SCRIPT_DIR/.env.example" "$TMP_DIR/$BUNDLE_NAME/.env.example"
 cp "$SCRIPT_DIR/nginx.conf" "$TMP_DIR/$BUNDLE_NAME/nginx.conf"
 cp "$SCRIPT_DIR/README.md" "$TMP_DIR/$BUNDLE_NAME/README.md"
@@ -470,15 +471,13 @@ git commit -m "feat: generate secret-free NAS bundle"
 
 ## 创建 Cloudflare Tunnel
 
-进入 Cloudflare Zero Trust -> Networks -> Tunnels，创建 Cloudflared Tunnel：
+进入 Cloudflare Zero Trust -> Networking -> Tunnels，选择 trendradar-nas，然后进入 Routes -> Add route -> Published application：
 - Name: trendradar-nas
 - Connector: Docker
-- Public hostname: trend.shankluo.cc
-- Service type: HTTP
-- Service URL: report-web:80
-- Access: disabled
+- Hostname: trend.shankluo.cc
+- Service URL: http://report-web:80
 
-只复制 Tunnel Token，不复制或保存整条命令。
+不创建 Cloudflare Access 应用，该 Published application 匿名公开。只复制 Tunnel Token，不复制或保存整条命令。
 
 ## 准备 NAS
 
@@ -487,29 +486,30 @@ git commit -m "feat: generate secret-free NAS bundle"
 
 复制 .env.example 为 .env，只填写 AI_API_KEY 和
 CLOUDFLARE_TUNNEL_TOKEN。保留 AI_MODEL=deepseek/deepseek-chat、
-空 AI_API_BASE 和四小时调度。
+空 AI_API_BASE、AI_ANALYSIS_ENABLED=false 和四小时调度。
 
 ## 创建 Container Manager 项目
 
 - Project name: xjiankong
-- Path: /volume1/docker/trendradar-nas/
-- Compose source: compose.yaml
+- Source: 上传 docker-compose.yml
+- Project path: /volume1/docker/trendradar-nas/
+- 不启用可选 Web Station portal/网页入口。
 - 启动前确认没有端口映射。
 
 ## 首次验收
 
-启动后先确认三个容器运行。获得老板对单次付费 AI 调用的明确确认后，
+启动后保持 AI_ANALYSIS_ENABLED=false，先确认三个容器和公网页面安全。未确认前 cron 可继续采集但不调用 AI。获得老板对单次付费 AI 调用的再次明确批准后，
 在 xjiankong-trendradar 容器终端执行：
 
-cd /app && python -m trendradar
+cd /app && AI_ANALYSIS_ENABLED=true python -m trendradar
 
 验证 output/index.html 已生成、trend.shankluo.cc 可访问、敏感路径返回
-404、日志显示四小时调度，并且重启项目不会立即采集。
+404、日志显示四小时调度，并且重启项目不会立即采集。验收成功后才将 NAS .env 的 AI_ANALYSIS_ENABLED 改为 true，在 Container Manager 的 xjiankong 项目页停止项目，再重新构建并启动项目，以重建 trendradar 容器并使后续四小时 cron 启用 AI。
 
 ## 更新与回滚
 
 更新前备份 .env 和 config/。新包不得覆盖 NAS 上的 .env 与 output/。
-镜像升级必须先通过本地集成测试。回滚时恢复上一份 Compose 与镜像 digest。
+镜像升级必须先通过本地集成测试。只将新 .env.example 的 TRENDRADAR_IMAGE、REPORT_WEB_IMAGE、CLOUDFLARED_IMAGE 三行复制到现有 .env，保留 key/token。回滚时恢复上一份 docker-compose.yml 和这三行旧 digest，然后重建项目。
 ~~~
 
 - [ ] **Step 2: 扫描并重新打包**
@@ -541,7 +541,7 @@ git commit -m "docs: add Synology deployment runbook"
 ~~~bash
 echo ""
 echo "[5/6] NAS 部署模板"
-check "NAS Compose 非空" test -s deploy/nas/compose.yaml
+check "NAS Compose 非空" test -s deploy/nas/docker-compose.yml
 check "NAS 环境变量模板非空" test -s deploy/nas/.env.example
 check "NAS Nginx 配置非空" test -s deploy/nas/nginx.conf
 check "NAS 构建脚本可执行" test -x deploy/nas/build-bundle.sh
@@ -658,9 +658,10 @@ Expected: 老板在当前对话明确批准四项；否则停止。
 ~~~text
 Tunnel: trendradar-nas
 Connector: Docker
-Public hostname: trend.shankluo.cc
-Service: http://report-web:80
-Access: disabled
+Route: Published application
+Hostname: trend.shankluo.cc
+Service URL: http://report-web:80
+Cloudflare Access application: 不创建，因此匿名公开
 ~~~
 
 Expected: Tunnel 已创建并等待 connector。
@@ -676,22 +677,27 @@ AI Key 和新 Tunnel Token，不在日志、截图或对话中显示值。
 ~~~text
 Project name: xjiankong
 Path: /volume1/docker/trendradar-nas
-Compose file: compose.yaml
+Source: 上传 docker-compose.yml
+Web Station portal/网页入口: 不启用
 ~~~
 
 Expected: 三个容器运行，界面没有端口映射。
 
 - [ ] **Step 5: 确认启动不调用模型**
 
-日志必须显示 CRON_SCHEDULE 为 0 */4 * * *、IMMEDIATE_RUN 为 false，且启动后没有立即采集。
+日志必须显示 CRON_SCHEDULE 为 0 */4 * * *、IMMEDIATE_RUN 为 false、AI_ANALYSIS_ENABLED 为 false，且启动后没有立即采集。未批准前 cron 可采集但不调用 AI。
 
 - [ ] **Step 6: 再次确认费用后人工采集**
 
 ~~~bash
-cd /app && python -m trendradar
+cd /app && AI_ANALYSIS_ENABLED=true python -m trendradar
 ~~~
 
 Expected: 退出码 0，生成 index.html 和当天 HTML，日志无密钥。
+
+- [ ] **Step 6a: 启用后续 cron AI 分析**
+
+首次付费验收成功后，将 NAS `.env` 中 `AI_ANALYSIS_ENABLED` 改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目，以重建 `trendradar` 容器。
 
 - [ ] **Step 7: 公网安全验收**
 

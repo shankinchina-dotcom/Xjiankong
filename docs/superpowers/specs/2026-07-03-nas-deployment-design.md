@@ -1,6 +1,6 @@
 # 群晖 NAS 部署设计
 
-> 状态：设计已确认，尚未实施。
+> 状态：设计已确认，仓库部署模板已实施；Cloudflare 和 NAS 外部部署尚未实施。
 >
 > 目标设备：Synology DS220+，DSM Container Manager。
 >
@@ -88,12 +88,19 @@ trend.shankluo.cc -> http://report-web:80
 - 时区：`Asia/Taipei`。
 - 采集计划：`0 */4 * * *`，即每天 00:00、04:00、08:00、12:00、16:00、20:00。
 - `IMMEDIATE_RUN=false`，避免容器重启触发额外 AI 调用。
+- `AI_ANALYSIS_ENABLED=false` 作为首次部署的安全默认；未确认付费调用前，cron 可继续采集，但不调用 AI。
 - 生产过滤方式保持 `filter.method=keyword`。
 - AI 模型、API Base 和分析行为沿用当前本地部署；AI Key 只从 `.env` 注入。
 - `config/` 以只读方式挂载，`output/` 以读写方式挂载。
 - 不发布内置 Web 端口。
 
-首次部署完成后人工执行一次采集，用于验收 AI 分析与报告生成。该次运行会调用模型，必须由老板在部署会话中明确确认。
+首次部署完成后，先保持 `AI_ANALYSIS_ENABLED=false` 验收容器和公网边界。老板再次明确批准单次付费 AI 调用后，仅在该次容器命令中临时启用：
+
+```bash
+AI_ANALYSIS_ENABLED=true python -m trendradar
+```
+
+验收成功后才将 NAS `.env` 中的 `AI_ANALYSIS_ENABLED` 改为 `true`。在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目；该操作会按新 `.env` 重建 `trendradar` 容器，使后续每 4 小时 cron 启用 AI。
 
 ### 4.2 report-web
 
@@ -107,7 +114,7 @@ trend.shankluo.cc -> http://report-web:80
 - 对未声明路径返回 `404`；对明确敏感路径返回 `403` 或 `404` 均视为合格。
 - 不代理 TrendRadar 管理命令、API 或内置 Web 服务。
 
-日报本身是公开内容。任何写入 HTML 的账号、原文、分析和链接都应视为可被搜索、下载和转发，不能依赖“不公开网址”获得保密性。
+日报本身是公开内容。任何写入 HTML 的账号、原文、分析和外链都可被搜索、下载和转发，不得包含私人或内部信息，不能依赖“不公开网址”获得保密性。
 
 ### 4.3 cloudflared
 
@@ -122,8 +129,8 @@ trend.shankluo.cc -> http://report-web:80
 NAS 目标目录：
 
 ```text
-/volume1/docker/trendradar/
-├── compose.yaml
+/volume1/docker/trendradar-nas/
+├── docker-compose.yml
 ├── .env
 ├── nginx.conf
 ├── config/
@@ -134,8 +141,8 @@ NAS 目标目录：
 
 - `config/`：从当前实际运行的 TrendRadar 配置生成，不携带凭据。
 - `output/`：首次部署为空，由 TrendRadar 创建数据库和日报。
-- `.env`：只在 NAS 保存，权限限制为管理员可读，不进入 Git 和部署压缩包。
-- 未来升级不得覆盖 `config/` 和 `output/`。
+- `.env`：只在 NAS 保存；通过 File Station 的“属性 -> 权限”限制为仅管理员可读写，移除 `users` 和 `everyone`，不进入 Git、部署压缩包或同步公开目录。备份副本使用相同权限。
+- 未来升级不得覆盖 `.env`、`config/` 和 `output/`。
 - 建议通过 Hyper Backup 备份 `config/`；`output/` 是否备份由数据保留需求决定。
 
 ## 六、一键部署包
@@ -144,7 +151,7 @@ NAS 目标目录：
 
 ```text
 deploy/nas/
-├── compose.yaml
+├── docker-compose.yml
 ├── .env.example
 ├── nginx.conf
 ├── build-bundle.sh
@@ -158,30 +165,28 @@ deploy/nas/
 - 对输出执行敏感字段扫描；发现非空 API Key、Webhook、Token 或密码时失败退出。
 - 生成物放入仓库忽略的临时输出目录，不作为配置源提交。
 
-群晖端操作保持为：上传并解压、复制 `.env.example` 为 `.env`、填写四个环境变量、在 Container Manager 中从 `compose.yaml` 创建项目。
+群晖端操作保持为：上传并解压、复制 `.env.example` 为 `.env`、只填写两个凭据变量，再在 Container Manager 的“项目 -> 新增/创建”中选择上传来源，从解压包选择 `docker-compose.yml`，项目路径为 `/volume1/docker/trendradar-nas/`。不启用可选的 Web Station portal/网页入口。
 
 必须填写的环境变量：
 
 ```text
 AI_API_KEY
-AI_MODEL
-AI_API_BASE
 CLOUDFLARE_TUNNEL_TOKEN
 ```
 
-`AI_MODEL` 和 `AI_API_BASE` 沿用当前本机值。`build-bundle.sh` 将这两个非敏感值写入生成包的 `.env.example`；若 API Base URL 含用户名、密码、Token 或查询凭据，脚本必须失败退出，改由老板在 NAS 手动填写。
+`AI_MODEL` 保留 `deepseek/deepseek-chat`，`AI_API_BASE` 保持为空，`AI_ANALYSIS_ENABLED` 默认为 `false`。
 
 ## 七、Cloudflare 配置
 
-在 Cloudflare 后台创建独立远程管理 Tunnel：
+在 Cloudflare Zero Trust 进入 **Networking > Tunnels**，选择 `trendradar-nas`，然后进入 **Routes -> Add route -> Published application**：
 
 ```text
 名称：trendradar-nas
-Public hostname：trend.shankluo.cc
-Service：http://report-web:80
+Hostname：trend.shankluo.cc
+Service URL：http://report-web:80
 ```
 
-不启用 Cloudflare Access，保持匿名访问。HTTPS 在 Cloudflare 边缘终止，NAS 端只接收 Tunnel 内部流量。
+不创建 Cloudflare Access 应用，因此该 Published application 匿名公开。HTTPS 在 Cloudflare 边缘终止，NAS 端只接收 Tunnel 内部流量。
 
 现有 `nas.shankluo.cc`、Note、Photo 的 DNS、Tunnel 和容器配置不在实施范围内。
 
@@ -193,7 +198,7 @@ Service：http://report-web:80
 | RSS/Nitter 单源失败 | 其他来源继续采集 | 保留 best-effort 行为，不因单源失败退出整套服务 |
 | Cloudflare Tunnel 中断 | 公网暂时无法访问；采集和本地输出继续 | `cloudflared` 自动重启和重连 |
 | report-web 启动时尚无日报 | 首页暂时返回 404 | 首次人工采集成功后恢复 |
-| NAS 或容器重启 | 不立即调用模型 | 三个容器自动恢复，等待下一 4 小时调度 |
+| NAS 或容器重启 | 不立即调用模型 | 三个容器自动恢复；未批准前 cron 只采集不调用 AI |
 | 配置缺失 | TrendRadar 启动失败并记录明确错误 | 补齐配置后重启项目，不绕过校验 |
 | Tunnel Token 缺失 | 仅 `cloudflared` 无法连接 | 在 NAS `.env` 补齐 Token，其他容器不受影响 |
 
@@ -223,8 +228,9 @@ Service：http://report-web:80
 - `trendradar`、`report-web`、`cloudflared` 均处于运行状态。
 - 容器重启策略为 `unless-stopped`。
 - `trendradar` 日志显示 cron 为 `0 */4 * * *`，且启动时未自动采集。
-- 人工确认后执行一次采集，成功生成 `output/index.html` 和日期 HTML。
+- 人工确认后使用 `AI_ANALYSIS_ENABLED=true python -m trendradar` 执行一次采集，成功生成 `output/index.html` 和日期 HTML。
 - AI 分析成功，日志不包含 AI Key 或 Tunnel Token。
+- 验收后将 NAS `.env` 中开关改为 `true`，在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动项目，以重建 `trendradar` 容器；下一个 4 小时 cron 启用 AI。
 
 ### 10.3 公网验证
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="$SCRIPT_DIR/compose.yaml"
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 ENV_FILE="$SCRIPT_DIR/.env.example"
 NGINX_FILE="$SCRIPT_DIR/nginx.conf"
 BUILD_BUNDLE_FILE="$SCRIPT_DIR/build-bundle.sh"
@@ -116,11 +116,15 @@ fi
 if grep -Fq 'trendradar-mcp' "$COMPOSE_FILE"; then
   fail 'compose_contains_trendradar-mcp'
 fi
+grep -Fq 'AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}' \
+  "$COMPOSE_FILE" || fail 'compose_ai_analysis_default_not_false'
 
 [[ "$(env_value CRON_SCHEDULE)" == '0 */4 * * *' ]] ||
   fail 'env_invalid_CRON_SCHEDULE'
 [[ "$(env_value IMMEDIATE_RUN)" == 'false' ]] ||
   fail 'env_invalid_IMMEDIATE_RUN'
+[[ "$(env_value AI_ANALYSIS_ENABLED)" == 'false' ]] ||
+  fail 'env_invalid_AI_ANALYSIS_ENABLED'
 require_env_key AI_API_KEY
 require_env_key CLOUDFLARE_TUNNEL_TOKEN
 [[ -z "$(env_value AI_API_KEY)" ]] || fail 'env_nonempty_AI_API_KEY'
@@ -237,6 +241,8 @@ CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
   "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1 || fail 'bundle_safe_fixture_failed'
 [[ -d "$BUNDLE_DIST_DIR/trendradar-nas" ]] || fail 'bundle_directory_missing'
 [[ -s "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" ]] || fail 'bundle_archive_missing'
+[[ -s "$BUNDLE_DIST_DIR/trendradar-nas/docker-compose.yml" ]] ||
+  fail 'bundle_compose_missing'
 [[ -s "$BUNDLE_DIST_DIR/trendradar-nas/config/timeline.yaml" ]] ||
   fail 'bundle_config_incomplete'
 [[ ! -e "$BUNDLE_DIST_DIR/trendradar-nas/config/output" ]] ||
@@ -280,7 +286,7 @@ OLD_ARCHIVE_CKSUM="$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")"
 
 mkdir -p "$TEMPLATE_DIR"
 cp "$BUILD_BUNDLE_FILE" "$TEMPLATE_DIR/build-bundle.sh"
-cp "$COMPOSE_FILE" "$TEMPLATE_DIR/compose.yaml"
+cp "$COMPOSE_FILE" "$TEMPLATE_DIR/docker-compose.yml"
 cp "$ENV_FILE" "$TEMPLATE_DIR/.env.example"
 cp "$NGINX_FILE" "$TEMPLATE_DIR/nginx.conf"
 cp "$SCRIPT_DIR/README.md" "$TEMPLATE_DIR/README.md"

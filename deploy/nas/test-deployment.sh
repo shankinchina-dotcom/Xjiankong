@@ -115,7 +115,15 @@ require_nginx_selector directories \
   '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\^/\(news\|rss\|meta\|config\)\(/\|[$]\)[[:space:]]*\{'
 require_nginx_database_selector
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
+COMPOSE_JSON="$(
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --format json
+)"
+
+printf '%s\n' "$COMPOSE_JSON" | jq -e '
+  (.services.trendradar.networks | keys) == ["collector"]
+  and (.services["report-web"].networks | keys) == ["publish"]
+  and (.services.cloudflared.networks | keys) == ["publish"]
+' >/dev/null || fail 'compose_invalid_network_isolation'
 
 if [[ "$MODE" == '--static' ]]; then
   printf 'nas_static=passed\n'
@@ -147,12 +155,18 @@ mkdir -p \
   "$OUTPUT_DIR/config"
 printf '%s\n' 'NAS index fixture' >"$OUTPUT_DIR/index.html"
 printf '%s\n' 'NAS dated report fixture' >"$OUTPUT_DIR/html/2026-07-04/report.html"
+printf '%s\n' 'NAS uppercase report fixture' >"$OUTPUT_DIR/html/2026-07-04/uppercase.HTML"
 printf '%s\n' 'private news database' >"$OUTPUT_DIR/news/private.db"
 printf '%s\n' 'private rss database' >"$OUTPUT_DIR/rss/private.db"
 printf '%s\n' 'private metadata database' >"$OUTPUT_DIR/meta/private.db"
 printf '%s\n' 'private config database' >"$OUTPUT_DIR/config/private.sqlite"
+printf '%s\n' 'private HTML text' >"$OUTPUT_DIR/html/private.txt"
+printf '%s\n' 'private HTML settings' >"$OUTPUT_DIR/html/settings.ini"
+printf '%s\n' 'private hidden HTML' >"$OUTPUT_DIR/html/.private.html"
 printf '%s\n' 'private HTML database' >"$OUTPUT_DIR/html/private.db"
 printf '%s\n' 'private SQLite 3 database' >"$OUTPUT_DIR/html/private.sqlite3"
+printf '%s\n' 'private disguised database' >"$OUTPUT_DIR/html/private.db.html"
+printf '%s\n' 'private disguised environment' >"$OUTPUT_DIR/html/private.env.HTML"
 printf '%s\n' 'private environment fixture' >"$OUTPUT_DIR/.env"
 printf '%s\n' 'private undeclared fixture' >"$OUTPUT_DIR/private.txt"
 
@@ -164,14 +178,24 @@ printf '%s\n' 'private undeclared fixture' >"$OUTPUT_DIR/private.txt"
 "${COMPOSE[@]}" exec -T report-web \
   wget -qO- http://127.0.0.1/html/2026-07-04/report.html |
   grep -Fq 'NAS dated report fixture' || fail 'dated_report_not_readable'
+"${COMPOSE[@]}" exec -T report-web \
+  wget -qO- http://127.0.0.1/html/2026-07-04/uppercase.HTML |
+  grep -Fq 'NAS uppercase report fixture' || fail 'uppercase_report_not_readable'
 
 for path in \
   news/private.db \
+  news//private.db \
   rss/private.db \
   meta/private.db \
   config/private.sqlite \
+  html/private.txt \
+  html/settings.ini \
+  html/.private.html \
+  html/%2eprivate.html \
   html/private.db \
   html/private.sqlite3 \
+  html/private.db.html \
+  html/private.env.HTML \
   .env \
   private.txt; do
   require_rejected_status "$path"

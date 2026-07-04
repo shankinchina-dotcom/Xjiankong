@@ -18,7 +18,7 @@ services:
       - ${CONFIG_DIR:-./config}:/app/config:ro
       - ${OUTPUT_DIR:-./output}:/app/output
     networks:
-      - backend
+      - collector
 
   report-web:
     image: ${REPORT_WEB_IMAGE}
@@ -39,7 +39,7 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - backend
+      - publish
 
   cloudflared:
     image: ${CLOUDFLARED_IMAGE}
@@ -52,8 +52,10 @@ services:
       report-web:
         condition: service_healthy
     networks:
-      - backend
+      - publish
 
 networks:
-  backend:
+  collector:
+    internal: false
+  publish:
     internal: false

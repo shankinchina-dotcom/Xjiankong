@@ -612,7 +612,7 @@ Expected: 全部成功，git diff --check 无输出。
 **Files:**
 - Verify only
 
-- [ ] **Step 1: 执行完整测试**
+- [x] **Step 1: 执行完整测试**
 
 ~~~bash
 bash quality-check.sh
@@ -624,7 +624,7 @@ git diff --check
 
 Expected: 全部退出码为 0。
 
-- [ ] **Step 2: 生成并扫描最终包**
+- [x] **Step 2: 生成并扫描最终包**
 
 ~~~bash
 rm -rf dist/trendradar-nas dist/trendradar-nas.tar.gz
@@ -638,7 +638,7 @@ test ! -e dist/trendradar-nas/.env
 
 Expected: 没有凭据或数据库命中。
 
-- [ ] **Step 3: 检查范围**
+- [x] **Step 3: 检查范围**
 
 ~~~bash
 git status --short

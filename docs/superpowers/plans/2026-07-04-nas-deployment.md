@@ -549,7 +549,7 @@ git commit -m "docs: add Synology deployment runbook"
 - Modify: quality-check.sh
 - Modify: .github/workflows/quality.yml
 
-- [ ] **Step 1: 在 quality-check.sh 文档检查后加入 NAS 检查**
+- [x] **Step 1: 在 quality-check.sh 文档检查后加入 NAS 检查**
 
 ~~~bash
 echo ""
@@ -564,7 +564,7 @@ check "NAS 静态检查通过" bash deploy/nas/test-deployment.sh --static
 
 将 TrendRadar 标题改为 [6/6]，其他固定编号统一改为 /6。
 
-- [ ] **Step 2: 证明门禁能发现错误**
+- [x] **Step 2: 证明门禁能发现错误**
 
 ~~~bash
 mv deploy/nas/nginx.conf /tmp/xjiankong-nginx.conf
@@ -574,7 +574,7 @@ mv /tmp/xjiankong-nginx.conf deploy/nas/nginx.conf
 
 Expected: 至少一项 NAS 检查失败。
 
-- [ ] **Step 3: 恢复后运行检查**
+- [x] **Step 3: 恢复后运行检查**
 
 ~~~bash
 bash quality-check.sh
@@ -583,7 +583,7 @@ bash quality-check.sh --trendradar
 
 Expected: 两组检查均 0 失败。
 
-- [ ] **Step 4: 在 CI custom-checks 中加入**
+- [x] **Step 4: 在 CI custom-checks 中加入**
 
 ~~~yaml
       - name: Validate NAS deployment templates
@@ -593,7 +593,7 @@ Expected: 两组检查均 0 失败。
           bash deploy/nas/test-deployment.sh --static
 ~~~
 
-- [ ] **Step 5: 本地模拟并提交**
+- [x] **Step 5: 本地模拟并提交**
 
 ~~~bash
 bash -n deploy/nas/build-bundle.sh

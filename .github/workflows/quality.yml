@@ -75,5 +75,13 @@ jobs:
           test -f docs/archive/x-hosted-mcp-setup.md
           test ! -e x-hosted-mcp-setup.md
 
+      - name: Validate NAS deployment templates
+        run: |
+          command -v jq
+          docker compose version
+          bash -n deploy/nas/build-bundle.sh
+          bash -n deploy/nas/test-deployment.sh
+          bash deploy/nas/test-deployment.sh --static
+
       - name: Run quality-check.sh
         run: bash quality-check.sh ${{ inputs.check_trendradar && '--trendradar' || '' }}

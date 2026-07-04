@@ -208,6 +208,14 @@ cat >"$BUNDLE_CONFIG_DIR/multiline-safe.json" <<'JSON'
   }
 }
 JSON
+cat >"$BUNDLE_CONFIG_DIR/plaintext-safe.txt" <<'TEXT'
+token = ""
+token=${ENV_TOKEN}
+bot_token=
+access_token='${ENV_ACCESS_TOKEN}'
+secret_access_key=''
+max_tokens=1000
+TEXT
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/.env"
 printf '%s\n' 'must not be copied' >"$BUNDLE_CONFIG_DIR/history.db"
 for uppercase_extension in DB SQLITE SQLITE3; do
@@ -431,6 +439,18 @@ grep -Fq 'invalid_yaml:invalid-config.yaml' "$BUNDLE_LOG" ||
   fail 'bundle_invalid_yaml_filename_missing'
 rm "$BUNDLE_CONFIG_DIR/invalid-config.yaml"
 
+cat >"$BUNDLE_CONFIG_DIR/yaml-pattern.yaml" <<'YAML'
+metadata: ghp_yamlpattern123456
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_yaml_pattern_fixture_succeeded'
+fi
+if grep -Fq 'ghp_yamlpattern123456' "$BUNDLE_LOG"; then
+  fail 'bundle_yaml_pattern_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/yaml-pattern.yaml"
+
 for compound_field in bot_token secret_access_key access_token; do
   compound_value="${compound_field}-secret-value"
   printf 'credentials:\n  %s: %s\n' "$compound_field" "$compound_value" > \
@@ -460,6 +480,20 @@ if grep -Fq 'nonempty-json-secret-value' "$BUNDLE_LOG"; then
   fail 'bundle_json_secret_value_logged'
 fi
 rm "$BUNDLE_CONFIG_DIR/json-secret.json"
+
+cat >"$BUNDLE_CONFIG_DIR/json-pattern.json" <<'JSON'
+{
+  "metadata": "https://example.test/hooks/json-webhook-secret"
+}
+JSON
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_json_pattern_fixture_succeeded'
+fi
+if grep -Fq 'json-webhook-secret' "$BUNDLE_LOG"; then
+  fail 'bundle_json_pattern_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/json-pattern.json"
 
 printf '%s\n' '{"token": "null"}' > \
   "$BUNDLE_CONFIG_DIR/json-string-null.json"
@@ -495,6 +529,31 @@ fi
 grep -Fq 'invalid_json:invalid-secret.json' "$BUNDLE_LOG" ||
   fail 'bundle_invalid_json_filename_missing'
 rm "$BUNDLE_CONFIG_DIR/invalid-secret.json"
+
+printf '%s\n' 'token = "plain-text-secret-value"' > \
+  "$BUNDLE_CONFIG_DIR/plaintext-secret.txt"
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_plaintext_secret_fixture_succeeded'
+fi
+if grep -Fq 'plain-text-secret-value' "$BUNDLE_LOG"; then
+  fail 'bundle_plaintext_secret_value_logged'
+fi
+rm "$BUNDLE_CONFIG_DIR/plaintext-secret.txt"
+
+for compound_field in bot_token access_token secret_access_key; do
+  compound_value="${compound_field}-plaintext-value"
+  printf '%s = "%s"\n' "$compound_field" "$compound_value" > \
+    "$BUNDLE_CONFIG_DIR/$compound_field.txt"
+  if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+    "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+    fail "bundle_${compound_field}_plaintext_fixture_succeeded"
+  fi
+  if grep -Fq "$compound_value" "$BUNDLE_LOG"; then
+    fail "bundle_${compound_field}_plaintext_value_logged"
+  fi
+  rm "$BUNDLE_CONFIG_DIR/$compound_field.txt"
+done
 
 cat >"$BUNDLE_CONFIG_DIR/list-secret.yaml" <<'YAML'
 credentials:

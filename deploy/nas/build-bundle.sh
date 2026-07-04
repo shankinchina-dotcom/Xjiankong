@@ -103,6 +103,16 @@ def is_allowed_json_value(value):
     )
 
 
+def is_allowed_text_value(raw_value):
+    value = strip_comment(raw_value).strip()
+    if not value:
+        return True
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        quoted_value = value[1:-1]
+        return not quoted_value or is_env_placeholder(quoted_value)
+    return is_env_placeholder(value)
+
+
 def fail_secret(relative, field):
     print(
         f'bundle_build=failed reason=secret_field:{relative}:{field}',
@@ -153,6 +163,10 @@ if filter_method != 'keyword':
     print('bundle_build=failed reason=config_filter_method_not_keyword', file=sys.stderr)
     sys.exit(1)
 
+assignment_pattern = re.compile(
+    r'^\s*(?P<field>[A-Za-z_][A-Za-z0-9_-]*)\s*[:=]\s*(?P<value>.*?)\s*$'
+)
+
 for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
     dirnames[:] = [name for name in dirnames if not is_excluded_directory(name)]
     for filename in filenames:
@@ -167,6 +181,13 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
                 content = handle.read()
         except (UnicodeDecodeError, OSError):
             continue
+        for label, pattern in credential_patterns:
+            if pattern.search(content):
+                print(
+                    f'bundle_build=failed reason={label}:{relative}',
+                    file=sys.stderr,
+                )
+                sys.exit(1)
         if relative.lower().endswith('.json'):
             try:
                 json_value = json.loads(content, object_pairs_hook=JsonPairs)
@@ -180,13 +201,15 @@ for directory, dirnames, filenames in os.walk(config_root, followlinks=False):
             continue
         if relative.lower().endswith(('.yaml', '.yml')):
             continue
-        for label, pattern in credential_patterns:
-            if pattern.search(content):
-                print(
-                    f'bundle_build=failed reason={label}:{relative}',
-                    file=sys.stderr,
-                )
-                sys.exit(1)
+        for line in content.splitlines():
+            match = assignment_pattern.match(line)
+            if not match:
+                continue
+            field = normalized_field(match.group('field'))
+            if is_secret_field(field) and not is_allowed_text_value(
+                match.group('value')
+            ):
+                fail_secret(relative, field)
 PY
 
 ruby -rpsych - "$CONFIG_SOURCE" <<'RUBY'

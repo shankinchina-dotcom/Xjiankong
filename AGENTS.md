@@ -24,6 +24,7 @@
 | `docs/archive/` | 已放弃或暂停的历史方案 | 不作为执行入口；恢复前重新核验外部依赖 |
 | `docs/superpowers/specs/` | 已确认但尚未实施的设计规格 | 规格经老板确认后写入；实施状态必须在文档中明确标注 |
 | `docs/superpowers/plans/` | 已批准设计对应的实施计划 | 使用复选框追踪；外部资源操作必须保留确认闸门 |
+| `deploy/nas/` | 群晖 Container Manager 部署模板和生成器 | 不保存凭据或生成包；外部部署前必须重新确认 |
 | `config/x-accounts.json` | X 账号唯一数据源 | 账号只在此处新增、删除、改组或改审核策略 |
 | `config/trendradar/` | 同步到 TrendRadar 的受控配置快照 | 修改后对照实际 fork 并运行质量检查 |
 | `output/experiments/filter-ab/<run_id>/` | 未来 K/AI 离线实验产物 | 不作为运行配置；完成复盘并确认无保留价值后清理 |

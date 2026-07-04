@@ -1,2 +1,6 @@
 .claude/
 .worktrees/
+/dist/
+/deploy/nas/.env
+/deploy/nas/output/
+/deploy/nas/config/

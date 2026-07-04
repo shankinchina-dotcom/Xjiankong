@@ -41,6 +41,29 @@ require_nginx_selector() {
   grep -Eq "$pattern" "$NGINX_FILE" || fail "nginx_missing_selector:$name"
 }
 
+require_nginx_database_selector() {
+  local selector
+  local extensions
+  local required
+
+  selector="$(
+    grep -E '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\\[.]\([^)]*\)[$][[:space:]]*\{' \
+      "$NGINX_FILE" | head -n 1 || true
+  )"
+  [[ -n "$selector" ]] || fail 'nginx_missing_selector:databases'
+
+  extensions="$(
+    printf '%s\n' "$selector" |
+      awk 'match($0, /\\[.]\([^)]*\)[$]/) { print substr($0, RSTART + 3, RLENGTH - 5) }'
+  )"
+  for required in db sqlite sqlite3; do
+    case "|$extensions|" in
+      *"|$required|"*) ;;
+      *) fail "nginx_missing_database_extension:$required" ;;
+    esac
+  done
+}
+
 http_status() {
   local path="$1"
   local response
@@ -90,8 +113,7 @@ require_env_key CLOUDFLARE_TUNNEL_TOKEN
 
 require_nginx_selector directories \
   '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\^/\(news\|rss\|meta\|config\)\(/\|[$]\)[[:space:]]*\{'
-require_nginx_selector databases \
-  '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\\[.]\(db\|sqlite\|sqlite3\)[$][[:space:]]*\{'
+require_nginx_database_selector
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
 

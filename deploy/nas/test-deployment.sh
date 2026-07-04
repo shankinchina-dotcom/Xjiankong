@@ -34,38 +34,32 @@ require_env_key() {
   grep -q "^${key}=" "$ENV_FILE" || fail "env_missing_${key}"
 }
 
-require_nginx_denial() {
-  local token="$1"
+require_nginx_selector() {
+  local name="$1"
+  local pattern="$2"
 
-  awk -v token="$token" '
-    {
-      line = $0
-      sub(/#.*/, "", line)
+  grep -Eq "$pattern" "$NGINX_FILE" || fail "nginx_missing_selector:$name"
+}
 
-      if (!active && line ~ token) {
-        candidate = 1
-      }
-      if (!active && candidate && line ~ /\{/) {
-        active = 1
-        depth = gsub(/\{/, "{", line) - gsub(/\}/, "}", line)
-      } else if (active) {
-        depth += gsub(/\{/, "{", line) - gsub(/\}/, "}", line)
-      }
+http_status() {
+  local path="$1"
+  local response
 
-      if (active && line ~ /(deny[[:space:]]+all|return[[:space:]]+(403|404))/) {
-        denied = 1
-      }
-      if (active && depth <= 0) {
-        if (denied) {
-          success = 1
-        }
-        active = 0
-        candidate = 0
-        denied = 0
-      }
-    }
-    END { exit(success ? 0 : 1) }
-  ' "$NGINX_FILE" || fail "nginx_missing_denial:$token"
+  response="$(
+    "${COMPOSE[@]}" exec -T report-web \
+      wget -S -O /dev/null "http://127.0.0.1/$path" 2>&1 || true
+  )"
+  printf '%s\n' "$response" |
+    awk '/^[[:space:]]*HTTP\/[0-9.]+[[:space:]]+[0-9][0-9][0-9]/ { status = $2 } END { print status }'
+}
+
+require_rejected_status() {
+  local path="$1"
+  local status
+
+  status="$(http_status "$path")"
+  [[ "$status" == '403' || "$status" == '404' ]] ||
+    fail "sensitive_path_status:/$path:${status:-missing}"
 }
 
 case "$MODE" in
@@ -94,15 +88,28 @@ require_env_key CLOUDFLARE_TUNNEL_TOKEN
 [[ -z "$(env_value CLOUDFLARE_TUNNEL_TOKEN)" ]] ||
   fail 'env_nonempty_CLOUDFLARE_TUNNEL_TOKEN'
 
-for path in news rss meta config; do
-  require_nginx_denial "$path"
-done
-for extension in db sqlite; do
-  require_nginx_denial "$extension"
-done
+require_nginx_selector directories \
+  '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\^/\(news\|rss\|meta\|config\)\(/\|[$]\)[[:space:]]*\{'
+require_nginx_selector databases \
+  '^[[:space:]]*location[[:space:]]+~[*]?[[:space:]]+\\[.]\(db\|sqlite\|sqlite3\)[$][[:space:]]*\{'
 
+TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nas-deployment-test.XXXXXX")"
+CONFIG_DIR="$TEMP_DIR/config"
+OUTPUT_DIR="$TEMP_DIR/output"
 PROJECT_NAME="nas-deployment-test-$$"
-COMPOSE=(docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+mkdir -p "$CONFIG_DIR" "$OUTPUT_DIR"
+
+COMPOSE=(
+  env CONFIG_DIR="$CONFIG_DIR" OUTPUT_DIR="$OUTPUT_DIR"
+  docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE"
+)
+
+cleanup() {
+  "${COMPOSE[@]}" down --remove-orphans >/dev/null 2>&1 || true
+  rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
 "${COMPOSE[@]}" config >/dev/null
 
 if [[ "$MODE" == '--static' ]]; then
@@ -110,20 +117,22 @@ if [[ "$MODE" == '--static' ]]; then
   exit 0
 fi
 
-OUTPUT_DIR="$SCRIPT_DIR/output"
-[[ ! -e "$OUTPUT_DIR" ]] || fail "temporary_output_exists:$OUTPUT_DIR"
-
-cleanup() {
-  "${COMPOSE[@]}" down --remove-orphans >/dev/null 2>&1 || true
-  rm -rf "$OUTPUT_DIR"
-}
-trap cleanup EXIT
-
-mkdir -p "$OUTPUT_DIR/html/2026-07-04" "$OUTPUT_DIR/news" "$OUTPUT_DIR/rss"
+mkdir -p \
+  "$OUTPUT_DIR/html/2026-07-04" \
+  "$OUTPUT_DIR/news" \
+  "$OUTPUT_DIR/rss" \
+  "$OUTPUT_DIR/meta" \
+  "$OUTPUT_DIR/config"
 printf '%s\n' 'NAS index fixture' >"$OUTPUT_DIR/index.html"
 printf '%s\n' 'NAS dated report fixture' >"$OUTPUT_DIR/html/2026-07-04/report.html"
 printf '%s\n' 'private news database' >"$OUTPUT_DIR/news/private.db"
 printf '%s\n' 'private rss database' >"$OUTPUT_DIR/rss/private.db"
+printf '%s\n' 'private metadata database' >"$OUTPUT_DIR/meta/private.db"
+printf '%s\n' 'private config database' >"$OUTPUT_DIR/config/private.sqlite"
+printf '%s\n' 'private HTML database' >"$OUTPUT_DIR/html/private.db"
+printf '%s\n' 'private SQLite 3 database' >"$OUTPUT_DIR/html/private.sqlite3"
+printf '%s\n' 'private environment fixture' >"$OUTPUT_DIR/.env"
+printf '%s\n' 'private undeclared fixture' >"$OUTPUT_DIR/private.txt"
 
 "${COMPOSE[@]}" up -d --no-deps report-web >/dev/null
 
@@ -134,11 +143,16 @@ printf '%s\n' 'private rss database' >"$OUTPUT_DIR/rss/private.db"
   wget -qO- http://127.0.0.1/html/2026-07-04/report.html |
   grep -Fq 'NAS dated report fixture' || fail 'dated_report_not_readable'
 
-for path in news/private.db rss/private.db meta/private.db config/private.sqlite; do
-  if "${COMPOSE[@]}" exec -T report-web \
-    wget -qO- "http://127.0.0.1/$path" >/dev/null 2>&1; then
-    fail "sensitive_path_readable:/$path"
-  fi
+for path in \
+  news/private.db \
+  rss/private.db \
+  meta/private.db \
+  config/private.sqlite \
+  html/private.db \
+  html/private.sqlite3 \
+  .env \
+  private.txt; do
+  require_rejected_status "$path"
 done
 
 printf 'nas_integration=passed\n'

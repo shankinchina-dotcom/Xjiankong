@@ -295,6 +295,45 @@ grep -Fq 'old directory marker' \
 [[ "$(cksum "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz")" == "$OLD_ARCHIVE_CKSUM" ]] ||
   fail 'bundle_publish_failure_changed_old_archive'
 
+cp "$BUNDLE_CONFIG_DIR/config.yaml" "$TEMP_DIR/config.yaml.saved"
+cat >>"$BUNDLE_CONFIG_DIR/config.yaml" <<'YAML'
+filter:
+  method: ai
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_duplicate_filter_fixture_succeeded'
+fi
+cp "$TEMP_DIR/config.yaml.saved" "$BUNDLE_CONFIG_DIR/config.yaml"
+
+cat >"$BUNDLE_CONFIG_DIR/config.yaml" <<'YAML'
+filter:
+  method: keyword
+  method: ai
+ai:
+  api_key: ""
+YAML
+if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+  "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+  fail 'bundle_duplicate_filter_method_fixture_succeeded'
+fi
+cp "$TEMP_DIR/config.yaml.saved" "$BUNDLE_CONFIG_DIR/config.yaml"
+
+for filter_fixture in missing non-scalar ai; do
+  case "$filter_fixture" in
+    missing) printf '%s\n' 'filter: {}' >"$BUNDLE_CONFIG_DIR/config.yaml" ;;
+    non-scalar)
+      printf 'filter:\n  method: [keyword]\n' >"$BUNDLE_CONFIG_DIR/config.yaml"
+      ;;
+    ai) printf 'filter:\n  method: ai\n' >"$BUNDLE_CONFIG_DIR/config.yaml" ;;
+  esac
+  if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \
+    "$BUILD_BUNDLE_FILE" >"$BUNDLE_LOG" 2>&1; then
+    fail "bundle_filter_${filter_fixture}_fixture_succeeded"
+  fi
+done
+cp "$TEMP_DIR/config.yaml.saved" "$BUNDLE_CONFIG_DIR/config.yaml"
+
 printf '%s\n' '- {token: inline-leading-secret}' > \
   "$BUNDLE_CONFIG_DIR/inline-secret.yaml"
 if CONFIG_SOURCE="$BUNDLE_CONFIG_DIR" DIST_ROOT="$BUNDLE_DIST_DIR" \

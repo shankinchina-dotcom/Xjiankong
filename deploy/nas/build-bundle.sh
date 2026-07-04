@@ -75,13 +75,6 @@ def strip_comment(value):
     return value
 
 
-def scalar_value(value):
-    value = strip_comment(value).strip().rstrip(',').strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-        value = value[1:-1].strip()
-    return value
-
-
 def is_env_placeholder(value):
     return re.fullmatch(r'\$\{[A-Za-z_][A-Za-z0-9_]*\}', value) is not None
 
@@ -137,32 +130,6 @@ def check_json_value(value, relative):
         for child in value:
             check_json_value(child, relative)
 
-
-config_path = os.path.join(config_root, 'config.yaml')
-with open(config_path, encoding='utf-8') as handle:
-    config_lines = handle.readlines()
-
-filter_indent = None
-filter_method = None
-for line in config_lines:
-    clean = strip_comment(line.rstrip('\n'))
-    if not clean.strip():
-        continue
-    indent = len(clean) - len(clean.lstrip())
-    if filter_indent is None:
-        if re.fullmatch(r'\s*filter\s*:\s*', clean):
-            filter_indent = indent
-        continue
-    if indent <= filter_indent:
-        break
-    match = re.match(r'\s*method\s*:\s*(.*?)\s*$', clean)
-    if match:
-        filter_method = scalar_value(match.group(1))
-        break
-
-if filter_method != 'keyword':
-    print('bundle_build=failed reason=config_filter_method_not_keyword', file=sys.stderr)
-    sys.exit(1)
 
 assignment_pattern = re.compile(
     r'^\s*(?:export[ \t]+)?(?P<field>[A-Za-z_][A-Za-z0-9_-]*)'
@@ -268,6 +235,33 @@ def fail_secret(relative, field)
   exit 1
 end
 
+def fail_filter(relative)
+  warn "bundle_build=failed reason=config_filter_invalid:#{relative}"
+  exit 1
+end
+
+def validate_filter(ast, relative)
+  documents = Array(ast.children)
+  fail_filter(relative) unless documents.length == 1
+  root = documents.first.root
+  fail_filter(relative) unless root.is_a?(Psych::Nodes::Mapping)
+
+  filters = Array(root.children).each_slice(2).select do |key, _value|
+    key.is_a?(Psych::Nodes::Scalar) && key.value == 'filter'
+  end
+  fail_filter(relative) unless filters.length == 1
+  filter_value = filters.first[1]
+  fail_filter(relative) unless filter_value.is_a?(Psych::Nodes::Mapping)
+
+  methods = Array(filter_value.children).each_slice(2).select do |key, _value|
+    key.is_a?(Psych::Nodes::Scalar) && key.value == 'method'
+  end
+  fail_filter(relative) unless methods.length == 1
+  method_value = methods.first[1]
+  fail_filter(relative) unless method_value.is_a?(Psych::Nodes::Scalar)
+  fail_filter(relative) unless method_value.value == 'keyword'
+end
+
 def visit_yaml(node, relative, exact_secret_fields, block_styles, env_pattern)
   return if node.nil?
 
@@ -306,6 +300,7 @@ Dir.glob(File.join(config_root, '**', '*'), File::FNM_DOTMATCH).sort.each do |pa
     warn "bundle_build=failed reason=invalid_yaml:#{relative}"
     exit 1
   end
+  validate_filter(ast, relative) if relative == 'config.yaml'
   visit_yaml(ast, relative, exact_secret_fields, block_styles, env_pattern)
 end
 RUBY

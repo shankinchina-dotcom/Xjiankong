@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **A1 已部署、质量验证阶段**：TrendRadar 通过本地 Docker 运行，外部推送尚未启用；X Hosted MCP 已归档，不属于活动架构。
+本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **A1 已部署、质量验证阶段**：TrendRadar 通过本地 Docker 运行，外部推送尚未启用；群晖 NAS 部署包已完成并通过本地校验，但尚未在 NAS 或 Cloudflare 上执行部署；X Hosted MCP 已归档，不属于活动架构。
 
 ## 项目目标
 
@@ -64,7 +64,7 @@
 
 - TrendRadar 以实际 fork 的 `config/config.yaml`、`config/frequency_words.txt` 和 `config/timeline.yaml` 为运行来源。
 - Client Secret、API key、token、webhook 不得写入仓库、命令历史、日志或对话。涉及凭据写入时必须先获得老板明确确认。
-- 修改运行中的 TrendRadar 配置、重启容器、调用付费模型、恢复 X Hosted MCP 或发送飞书消息，均需老板在当前对话中明确要求。
+- 修改运行中的 TrendRadar 配置、重启容器、调用付费模型、恢复 X Hosted MCP、执行 NAS/Cloudflare 外部部署或发送飞书消息，均需老板在当前对话中明确要求。
 - 默认只允许读取容器状态、日志和 SQLite 快照；不得因文档变更顺带修改运行环境。
 
 ## 文档修改与验证

@@ -10,6 +10,14 @@
 - 公网报告地址为 `https://trend.shankluo.cc`。
 - 已在本地生成 `trendradar-nas.tar.gz`。
 
+在仓库根目录生成部署包：
+
+```bash
+bash deploy/nas/build-bundle.sh
+```
+
+命令成功后会生成 `dist/trendradar-nas/` 和 `dist/trendradar-nas.tar.gz`。生成器默认读取相邻 `../TrendRadar/config/`；只复制运行所需配置，并在发布压缩包前检查凭据和敏感字段。
+
 ## 2. 创建 Cloudflare Tunnel
 
 1. 打开 Cloudflare Zero Trust，进入 **Networking > Tunnels**。
@@ -95,6 +103,7 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
 
 ## 7. 故障处理
 
+- **生成器提示 `bundle_locked`**：先确认没有其他 `build-bundle.sh` 进程正在运行。只有确认构建进程已退出后，才删除仓库中的 `dist/.trendradar-nas.lock/` 并重新运行生成命令；不要在并发构建期间强制清锁。
 - **Tunnel 断开**：只影响 `trend.shankluo.cc` 公网访问。TrendRadar 的本地采集、生成和 NAS 上已有报告不受影响。检查 `xjiankong-cloudflared` 状态与日志，不要改为路由器端口转发。
 - **AI 调用失败**：查看 `xjiankong-trendradar` 日志中的错误，保留现场并等待下一调度周期。不要在未获确认时反复手动触发付费请求。
 - **Nitter 单源失败**：Nitter 是 best effort 的不稳定传输层。记录失败并等待后续周期，不要仅因单源不可用就删除监控账号。

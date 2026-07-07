@@ -1,6 +1,6 @@
 # AI 行业情报系统设计
 
-> 状态：A1 TrendRadar 已部署到群晖 NAS 并通过 Cloudflare Tunnel 公开只读日报；Nitter RSS 代理修复已实施并端到端验证通过（2026-07-07）：RSS 采集成功 **40/44**（30/33 Nitter X 源），从修复前 11/44 显著提升。热榜直连，RSS 经 Mihomo sidecar 按域名分流 Nitter。
+> 状态：A1 TrendRadar 已在群晖 NAS 四容器生产运行，通过 Cloudflare Tunnel 公开只读日报。v1.1（2026-07-07）：RSS 采集成功 **41/44**（30/33 Nitter），热榜 **11/11**；AI 分析（deepseek flash）和 AI 翻译已启用并通过端到端验证。
 >
 > 活动架构最后核对：2026-07-07。
 >
@@ -208,9 +208,10 @@ bash quality-check.sh --trendradar
 - 生产继续使用 Variant K，不因文档变更改变运行行为。
 - K/AI 实验使用同一 SQLite 快照、稳定 ID 和人工基准集。
 - GitHub 指标能力缺口被明确记录，不把“RSS 已接入”等同于“需求已满足”。
-- NAS、Tunnel、DNS 和只读公网发布已完成；AI 翻译与分析仍未启用。
+- NAS、Tunnel、DNS 和只读公网发布已完成；AI 分析（deepseek flash）与 AI 翻译已启用并通过端到端验证（2026-07-07）。
 - Nitter RSS 代理修复已实施并端到端验证通过（2026-07-07）：RSS 采集成功 **40/44**（30/33 Nitter X 源成功，2 个 404 为账号在 Nitter 不存在，非代理问题），从修复前 11/44 显著提升。热榜直连，RSS 经 `rss-proxy:7890` 按域名分流 Nitter。踩坑记录：NAS 运行配置需手动更新 `advanced.rss.use_proxy` 和 `proxy_url`（仓库快照与实际运行配置不同步）；Synology `sed -i` 不支持 macOS 的空备份后缀语法；误将爬虫代理一并开启会导致热榜全量失败。
 - 文档变更本身不修改 TrendRadar、Docker、RSS 源、关键词和账号清单。
+- AI 分析（deepseek flash）与翻译已启用，单次采集费用约几分钱。启用付费 AI 前已获老板明确确认。
 
 ## 七、参考资料
 

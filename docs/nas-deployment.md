@@ -2,7 +2,7 @@
 
 > 部署日期：2026-07-06
 >
-> 状态：四容器生产部署已上线运行。Nitter RSS 代理修复已完成端到端验证（2026-07-07）：RSS 采集成功 **40/44**（30/33 Nitter X 源成功），从修复前 11/44 显著提升。公网发布正常（trend.shankluo.cc 可访问）
+> 状态：四容器生产部署已上线运行，AI 分析与翻译已启用（v1.1，2026-07-07）。全系统端到端验证通过：热榜 11/11，RSS 41/44（30/33 Nitter），AI 分析 + 翻译正常。公网发布正常（trend.shankluo.cc 可访问）
 >
 > 公网地址：<https://trend.shankluo.cc>
 
@@ -132,6 +132,19 @@ Mihomo sidecar
 
 回滚：将 TrendRadar `advanced.rss.use_proxy` 改回 `false`，从 Compose 移除 `rss-proxy`，重建项目即可。
 
+## 五之四、AI 分析与翻译启用（2026-07-07）
+
+启用步骤：
+
+1. 修改 NAS `.env` 将 `AI_ANALYSIS_ENABLED` 和 `AI_TRANSLATION_ENABLED` 改为 `true`
+2. `docker compose up -d trendradar` 重建容器使环境变量生效
+3. 手动触发采集验证全链路：热榜 11/11，RSS 41/44，AI 分析完成，翻译 32/32 成功
+
+- 模型：`deepseek/deepseek-v4-flash`（LiteLLM 路由），API key 已通过 `AI_API_KEY` 环境变量传入
+- 费用：单次采集约几分钱（deepseek-v4-flash 极便宜）
+- 仅 RSS 标题翻译为中文，热榜标题保持原始语言
+- 回滚：将 `.env` 中两个开关改回 `false` 并重建容器
+
 ### 端到端验证踩坑（2026-07-07 新增）
 - **仓库快照 ≠ NAS 运行配置**：`deploy/nas/config/` 下的配置模板与 NAS `/volume1/docker/trendradar-nas/config/` 的实际运行文件是两套独立副本，修改仓库端不会自动同步到 NAS。验证时发现 NAS 上 `advanced.rss.use_proxy` 仍为 `false`、`proxy_url` 为空。
 - **Synology `sed -i` 语法**：macOS 的 `sed -i ''` 在 Synology Linux 上不工作（会把 `''` 解析为备份后缀），必须用 `sed -i` 不加参数。
@@ -142,8 +155,8 @@ Mihomo sidecar
 
 - `CRON_SCHEDULE=0 */4 * * *`，每 4 小时采集一次。
 - `IMMEDIATE_RUN=false`，容器重建不立即触发采集。
-- `AI_ANALYSIS_ENABLED=false`。
-- `AI_TRANSLATION_ENABLED=false`。
+- `AI_ANALYSIS_ENABLED=true`（2026-07-07 启用）。
+- `AI_TRANSLATION_ENABLED=true`（2026-07-07 启用）。
 - 容器重启策略为 `unless-stopped`。
 
 生产维护以 [`deploy/nas/README.md`](../deploy/nas/README.md) 为操作入口。修改运行配置、重建容器、写入订阅 URL 或启用 AI 前，都必须先说明变更与验证方式并获得确认。

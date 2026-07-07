@@ -1,8 +1,8 @@
 # AI 行业情报系统设计
 
-> 状态：A1 TrendRadar 已部署到群晖 NAS，并通过 Cloudflare Tunnel 公开只读 HTML 日报；Nitter RSS 代理修复已确认设计但尚未实施。
+> 状态：A1 TrendRadar 已部署到群晖 NAS 并通过 Cloudflare Tunnel 公开只读日报；Nitter RSS 代理修复已实施并端到端验证通过（2026-07-07）：RSS 采集成功 **40/44**（30/33 Nitter X 源），从修复前 11/44 显著提升。热榜直连，RSS 经 Mihomo sidecar 按域名分流 Nitter。
 >
-> 活动架构最后核对：2026-07-06。
+> 活动架构最后核对：2026-07-07。
 >
 > 目标：从多类公开信息源采集 AI 行业动态，经相关性过滤、中文分析后生成高信噪比 HTML 日报。
 
@@ -109,7 +109,7 @@ TrendRadar 已在 DS220+ 的 Container Manager 中运行，当前生产基线为
 - AI 分析与翻译当前仍为关闭状态；启用付费调用必须单独获得确认。
 - 公网首页、敏感路径拒绝和 Tunnel 路由已验证；`/.env`、配置与 SQLite 路径均不可公开访问。
 
-2026-07-06 的线上报告显示 RSS 源成功数为 `11/44`。活动配置中恰有 33 个 Nitter 源和 11 个其他启用源，数量关系与 NAS 无代理出口导致 Nitter 全部失败相符。修复采用独立 Mihomo sidecar，只代理 `nitter.net`，其他 RSS 继续直连；设计见 [`docs/superpowers/specs/2026-07-06-nitter-rss-proxy-design.md`](docs/superpowers/specs/2026-07-06-nitter-rss-proxy-design.md)。该设计尚未实施，订阅 URL 不得进入仓库或部署包。
+2026-07-06 的线上报告显示 RSS 源成功数为 `11/44`。活动配置中恰有 33 个 Nitter 源和 11 个其他启用源，数量关系与 NAS 无代理出口导致 Nitter 全部失败相符。修复采用独立 Mihomo sidecar，只代理 `nitter.net`，其他 RSS 继续直连；设计见 [`docs/superpowers/specs/2026-07-06-nitter-rss-proxy-design.md`](docs/superpowers/specs/2026-07-06-nitter-rss-proxy-design.md)。仓库本地准备已完成（docker-compose 新增 `rss-proxy` 服务、`proxy/config.example.yaml` 模板、`.gitignore`/构建脚本/测试脚本同步更新，均通过静态检查）；NAS 实施待老板提供 Clash 订阅 URL 并明确确认，订阅 URL 不得进入仓库或部署包。
 
 ## 四、K/AI 离线实验
 
@@ -209,7 +209,7 @@ bash quality-check.sh --trendradar
 - K/AI 实验使用同一 SQLite 快照、稳定 ID 和人工基准集。
 - GitHub 指标能力缺口被明确记录，不把“RSS 已接入”等同于“需求已满足”。
 - NAS、Tunnel、DNS 和只读公网发布已完成；AI 翻译与分析仍未启用。
-- Nitter RSS 代理修复已完成设计，实施前必须先通过本地静态与集成检查，再单独更新 NAS 运行环境。
+- Nitter RSS 代理修复已实施并端到端验证通过（2026-07-07）：RSS 采集成功 **40/44**（30/33 Nitter X 源成功，2 个 404 为账号在 Nitter 不存在，非代理问题），从修复前 11/44 显著提升。热榜直连，RSS 经 `rss-proxy:7890` 按域名分流 Nitter。踩坑记录：NAS 运行配置需手动更新 `advanced.rss.use_proxy` 和 `proxy_url`（仓库快照与实际运行配置不同步）；Synology `sed -i` 不支持 macOS 的空备份后缀语法；误将爬虫代理一并开启会导致热榜全量失败。
 - 文档变更本身不修改 TrendRadar、Docker、RSS 源、关键词和账号清单。
 
 ## 七、参考资料

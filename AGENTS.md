@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **A1 已部署、质量验证阶段**：TrendRadar 通过本地 Docker 运行，外部推送尚未启用；群晖 NAS 部署包已完成并通过本地校验，但尚未在 NAS 或 Cloudflare 上执行部署；X Hosted MCP 已归档，不属于活动架构。
+本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **NAS 生产部署阶段**：TrendRadar 已在群晖 NAS 通过 Docker Compose 四容器架构运行（trendradar + report-web + cloudflared + rss-proxy），Cloudflare Tunnel 已配置公网访问 `https://trend.shankluo.cc`；Nitter RSS 代理修复已完成端到端验证（2026-07-07）：RSS 采集成功 40/44（30/33 Nitter X 源），从修复前 11/44 显著提升；X Hosted MCP 已归档，不属于活动架构。
 
 ## 项目目标
 
@@ -25,6 +25,7 @@
 | `docs/superpowers/specs/` | 已确认但尚未实施的设计规格 | 规格经老板确认后写入；实施状态必须在文档中明确标注 |
 | `docs/superpowers/plans/` | 已批准设计对应的实施计划 | 使用复选框追踪；外部资源操作必须保留确认闸门 |
 | `deploy/nas/` | 群晖 Container Manager 部署模板和生成器 | 不保存凭据或生成包；外部部署前必须重新确认 |
+| `deploy/nas/proxy/config.example.yaml` | Mihomo（Clash 内核）Nitter 代理配置模板 | 只含占位订阅 URL；真实 `config.yaml` 与 `data/` 由 NAS 本地写入，不入库、不进部署包 |
 | `config/x-accounts.json` | X 账号唯一数据源 | 账号只在此处新增、删除、改组或改审核策略 |
 | `config/trendradar/` | 同步到 TrendRadar 的受控配置快照 | 修改后对照实际 fork 并运行质量检查 |
 | `output/experiments/filter-ab/<run_id>/` | 未来 K/AI 离线实验产物 | 不作为运行配置；完成复盘并确认无保留价值后清理 |
@@ -64,7 +65,8 @@
 
 - TrendRadar 以实际 fork 的 `config/config.yaml`、`config/frequency_words.txt` 和 `config/timeline.yaml` 为运行来源。
 - Client Secret、API key、token、webhook 不得写入仓库、命令历史、日志或对话。涉及凭据写入时必须先获得老板明确确认。
-- 修改运行中的 TrendRadar 配置、重启容器、调用付费模型、恢复 X Hosted MCP、执行 NAS/Cloudflare 外部部署或发送飞书消息，均需老板在当前对话中明确要求。
+- 修改运行中的 TrendRadar 配置、重启容器、调用付费模型、恢复 X Hosted MCP、修改 Cloudflare Tunnel 路由、部署或重建 Xjiankong Compose 项目（含新增 `rss-proxy` 容器）或发送飞书消息，均需老板在当前对话中明确要求。
+- Mihomo 订阅 URL 属凭据，只写入 NAS 本地 `deploy/nas/proxy/config.yaml`，不进仓库、部署包、生成器、日志、命令历史或对话；部署前需老板提供 URL 并明确确认。
 - 默认只允许读取容器状态、日志和 SQLite 快照；不得因文档变更顺带修改运行环境。
 
 ## 文档修改与验证

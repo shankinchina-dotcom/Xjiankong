@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **NAS 生产部署阶段**：TrendRadar 已在群晖 NAS 通过 Docker Compose 四容器架构运行（trendradar + report-web + cloudflared + rss-proxy），Cloudflare Tunnel 已配置公网访问 `https://trend.shankluo.cc`；AI 分析（deepseek flash）与 AI 翻译已启用；Nitter RSS 代理修复已完成端到端验证（2026-07-07）：热榜 11/11，RSS 41/44（30/33 Nitter），全系统验证通过；X Hosted MCP 已归档，不属于活动架构。
+本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **NAS 生产部署阶段**：TrendRadar 已在群晖 NAS 通过 Docker Compose 四容器架构运行（trendradar + report-web + cloudflared + rss-proxy），Cloudflare Tunnel 已配置公网访问 `https://trend.shankluo.cc`；AI 分析（deepseek flash）与 AI 翻译已启用；Nitter RSS 代理修复已完成端到端验证（2026-07-07）：热榜 11/11，RSS 41/44（30/33 Nitter），全系统验证通过；v2-alpha「AI 行业每日研判报告」已在 TrendRadar fork 本地完成验证和 UI 视觉收口（2026-07-08），最终基线为 `v2-alpha` HEAD `33d80973`，生产同步未执行，下一步仅允许只读核验闸门；X Hosted MCP 已归档，不属于活动架构。
 
 ## 项目目标
 

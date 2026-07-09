@@ -1,11 +1,11 @@
 # v2-alpha 生产同步计划
 
-> 状态：待确认。执行前必须取得老板逐闸门确认。
+> 状态：已完成（2026-07-09）。config/prompt 上传、新镜像同步、容器重建、付费 AI 触发和公网验证均已通过。
 > 基于：v2-alpha 本地验证通过 + UI 视觉收口完成（TrendRadar `v2-alpha` HEAD `33d80973`）
 >
-> **本计划只描述同步步骤，不执行任何生产操作。**
+> **本文件已从计划转为执行记录。后续生产变更仍需逐闸门确认。**
 >
-> 当前下一步：仅允许执行「只读核验闸门」。不得上传、覆盖、重启容器或触发 AI。
+> 生产镜像：`xjiankong-trendradar:v2-alpha-20260709`。
 
 ## 一、当前基线
 
@@ -16,21 +16,22 @@
 | 基线说明 | 含 Task 1-8、本地 AI 验证、UI 视觉收口与淡蓝色系统 |
 | v2-alpha 本地验证 | 8/8 通过 |
 | UI 预览 | `/private/tmp/v2-alpha-ui-preview.html` |
+| 生产镜像 | `xjiankong-trendradar:v2-alpha-20260709` |
+| 生产验证 | 热榜 11/11，RSS 38/44，翻译 26/26，AI 分析完成，公网 HTTP 200 |
 
 > `20575e25` 是 UI 收口前的旧基线，不得再作为生产同步基线。
 
 ## 二、NAS 当前状态核验
 
-> 执行前先通过 SSH 核验以下信息，填入实际值。
-> 当前只放行本节只读核验；不得执行 5.2 之后的任何上传、覆盖、重启、AI 触发步骤。
+> 本节为 2026-07-09 生产同步前的只读核验记录。
 
 | 核验项 | 命令 | 当前值 |
 |--------|------|--------|
-| 运行容器 | `sudo docker ps --filter name=xjiankong` | __待核验__ |
-| TrendRadar 版本 | `sudo docker exec xjiankong-trendradar python -m trendradar --version` | __待核验__ |
+| 运行容器 | `sudo docker ps --filter name=xjiankong` | trendradar、cloudflared、rss-proxy、report-web 均 Up |
+| TrendRadar 版本 | `sudo docker exec xjiankong-trendradar python -m trendradar --version` | 生产镜像已切至 `xjiankong-trendradar:v2-alpha-20260709` |
 | 配置目录 | `/volume1/docker/trendradar-nas/config/` | __确认存在__ |
 | output 目录 | `/volume1/docker/trendradar-nas/output/` | __确认存在__ |
-| 当前备份 | 上一次部署备份位置 | __待确认__ |
+| 当前备份 | 上一次部署备份位置 | config/prompt：`/volume1/docker/trendradar-nas/backups/v2-alpha-20260709-113527`；镜像切换：`/volume1/docker/trendradar-nas/backups/v2-alpha-image-20260709-124505` |
 
 ### 2.1 只读核验输出要求
 
@@ -308,14 +309,14 @@ curl -s -o /dev/null -w "%{http_code}" https://trend.shankluo.cc
 
 | # | 闸门 | 风险 | 执行前需确认 |
 |---|------|------|-------------|
-| 1 | Python 源码同步方式 | 容器内路径不可写导致失败 | 确认挂载方案后再同步 |
-| 2 | 配置文件上传 | 覆盖后旧配置丢失 | 备份后确认 |
-| 3 | 容器重建 | 服务短暂中断（< 1 分钟） | 确认可接受 |
-| 4 | 手动触发采集 | 调用付费 AI（几分钱） | 确认 |
-| 5 | 公网验证 | 访问公网 URL | 确认 |
+| 1 | Python 源码同步方式 | 容器内路径不可写导致失败 | 已确认镜像内置，改走新镜像方案 |
+| 2 | 配置文件上传 | 覆盖后旧配置丢失 | 已备份并完成 |
+| 3 | 容器重建 | 服务短暂中断（< 1 分钟） | 已确认并完成 |
+| 4 | 手动触发采集 | 调用付费 AI（几分钱） | 已确认并完成 |
+| 5 | 公网验证 | 访问公网 URL | 已确认并完成 |
 | 6 | Cloudflare | 不在本轮修改范围 | — |
 
-**每个闸门执行前必须获得老板在当前对话中明确确认。**
+**本次同步已按闸门完成；后续生产变更仍必须获得老板在当前对话中明确确认。**
 
 ## 九、不在此次范围
 

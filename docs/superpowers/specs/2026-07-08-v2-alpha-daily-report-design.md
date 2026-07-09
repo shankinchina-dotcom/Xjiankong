@@ -1,12 +1,14 @@
 # Xjiankong v2-alpha 设计方案：AI 行业每日研判报告
 
-> 状态：本地验证通过（2026-07-08）。UI 视觉收口已完成；生产同步未执行，需按独立计划逐闸门确认。
+> 状态：已生产上线（2026-07-09）。本地验证、UI 视觉收口、NAS 新镜像同步和公网验证均已完成。
 > 设计日期：2026-07-08。
 >
 > 验证报告：`output/html/2026-07-08/20-51.html`（本地 TrendRadar fork）
 > 模型：deepseek/deepseek-v4-flash · 费用：几分钱 · source_id 链接 44 个 · 8/8 板块存在
 > 最终 TrendRadar 基线：`v2-alpha` HEAD `33d80973`
-> 范围：**本地 v2-alpha 验证**。生产环境同步作为独立后续阶段，不在本轮范围。
+> 生产镜像：`xjiankong-trendradar:v2-alpha-20260709`
+> 生产验证：热榜 11/11 · RSS 38/44 · 翻译 26/26 · 公网 HTTP 200 · `/.env` 404 · `/news/test.db` 404
+> 范围：v2-alpha 已完成本地验证与生产同步；后续新增数据源或 AI HOT 展示层另起 v2-beta 设计。
 
 ## 一、目标
 

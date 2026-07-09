@@ -1,6 +1,6 @@
 # AI 行业情报系统设计
 
-> 状态：A1 TrendRadar 已在群晖 NAS 四容器生产运行，通过 Cloudflare Tunnel 公开只读日报。v1.1（2026-07-07）：RSS 采集成功 **41/44**（30/33 Nitter），热榜 **11/11**；AI 分析（deepseek flash）和 AI 翻译已启用并通过端到端验证。v2-alpha（2026-07-08）已在 TrendRadar fork 本地完成 8 板块「AI 行业每日研判报告」与 UI 视觉收口验证，最终本地基线为 `v2-alpha` HEAD `33d80973`；生产同步未执行。
+> 状态：A1 TrendRadar 已在群晖 NAS 四容器生产运行，通过 Cloudflare Tunnel 公开只读日报。v1.1（2026-07-07）：RSS 采集成功 **41/44**（30/33 Nitter），热榜 **11/11**；AI 分析（deepseek flash）和 AI 翻译已启用并通过端到端验证。v2-alpha「AI 行业每日研判报告」已于 2026-07-09 生产上线，当前镜像为 `xjiankong-trendradar:v2-alpha-20260709`，代码基线为 TrendRadar `v2-alpha` HEAD `33d80973`。
 >
 > 活动架构最后核对：2026-07-08。
 >
@@ -107,6 +107,7 @@ TrendRadar 已在 DS220+ 的 Container Manager 中运行，当前生产基线为
 - `report-web` 只读公开允许访问的 HTML 报告，不发布宿主机端口。
 - `cloudflared` 通过独立 Tunnel 将 `trend.shankluo.cc` 转发到内部 `report-web:80`，无需路由器端口映射。
 - AI 分析与翻译已启用；后续新增付费验证、切换模型或扩大调用范围仍必须单独获得确认。
+- v2-alpha 生产镜像为 `xjiankong-trendradar:v2-alpha-20260709`，由 TrendRadar `v2-alpha` HEAD `33d80973` 构建；镜像已通过 SourceRef/schema/formatter 免费验证和一次 deepseek flash 付费验证。
 - 公网首页、敏感路径拒绝和 Tunnel 路由已验证；`/.env`、配置与 SQLite 路径均不可公开访问。
 
 2026-07-06 的线上报告显示 RSS 源成功数为 `11/44`。活动配置中恰有 33 个 Nitter 源和 11 个其他启用源，数量关系与 NAS 无代理出口导致 Nitter 全部失败相符。修复采用独立 Mihomo sidecar，只代理 `nitter.net`，其他 RSS 继续直连；设计见 [`docs/superpowers/specs/2026-07-06-nitter-rss-proxy-design.md`](docs/superpowers/specs/2026-07-06-nitter-rss-proxy-design.md)。仓库本地准备已完成（docker-compose 新增 `rss-proxy` 服务、`proxy/config.example.yaml` 模板、`.gitignore`/构建脚本/测试脚本同步更新，均通过静态检查）；NAS 实施待老板提供 Clash 订阅 URL 并明确确认，订阅 URL 不得进入仓库或部署包。
@@ -206,8 +207,8 @@ bash quality-check.sh --trendradar
 
 - 活动架构只有 A1 TrendRadar，A2 仅存在于归档。
 - 生产继续使用 Variant K，不因文档变更改变运行行为。
-- v2-alpha 本地验证已完成：核心为 8 板块「AI 行业每日研判报告」、运行时 SourceRef/source_map 溯源、AI 分析区前置、HTML 视觉统一；生产同步必须使用 TrendRadar `v2-alpha` HEAD `33d80973`，旧基线 `20575e25` 不再使用。
-- v2-alpha 生产同步下一步只允许执行只读核验闸门：确认 NAS 容器、`/app/trendradar` 挂载方式、NAS 当前 `config.yaml` 与本地基线差异；不得上传、覆盖、重启容器或触发 AI。
+- v2-alpha 已生产上线（2026-07-09）：核心为 8 板块「AI 行业每日研判报告」、运行时 SourceRef/source_map 溯源、AI 分析区前置、HTML 视觉统一；生产基线为 TrendRadar `v2-alpha` HEAD `33d80973`，镜像 `xjiankong-trendradar:v2-alpha-20260709`。
+- v2-alpha 上线验证结果：热榜 11/11，RSS 38/44，翻译 26/26，AI 分析 deepseek flash 完成，页面含 `ai-section-v2`、8 板块和引用来源索引，公网 `https://trend.shankluo.cc` HTTP 200，`/.env` 与 `/news/test.db` 均 404。
 - K/AI 实验使用同一 SQLite 快照、稳定 ID 和人工基准集。
 - GitHub 指标能力缺口被明确记录，不把“RSS 已接入”等同于“需求已满足”。
 - NAS、Tunnel、DNS 和只读公网发布已完成；AI 分析（deepseek flash）与 AI 翻译已启用并通过端到端验证（2026-07-07）。

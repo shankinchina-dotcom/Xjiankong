@@ -1,10 +1,10 @@
 # v2-beta 深空研判报告 UI 重构设计
 
-> 状态：**视觉方案已确认，未进入代码实现。**
+> 状态：**本地代码实现与免费验证已完成，尚未合并或部署。**
 >
 > 本文覆盖 v2-beta 首页、历史入口和证据流的视觉与交互重构；它补充并覆盖 `2026-07-10-v2-beta-ui-visual-standards.md` 中与图标语言、卡片结构有关的旧约定。产品边界、历史数据边界、来源追溯要求仍以 `2026-07-09-v2-beta-intelligence-history-ui-design.md` 为准。
 >
-> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」与 Gate 5「受控 `history.json` 生成」均已完成。下一闸门为 Gate 6「深空报告与历史 UI 本地实现」；仅修改隔离 TrendRadar worktree，禁止触碰数据库、NAS、容器、Cloudflare 与付费 AI。
+> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」、Gate 5「受控 `history.json` 生成」与 Gate 6「深空报告与历史 UI 本地实现」均已完成。Gate 6 仅在隔离 TrendRadar worktree 的分支 `codex/v2-beta-history` 完成，尚未合并到 `v2-alpha`，未构建镜像、未部署生产。
 
 > 视觉参考：[`v2-beta-deep-space-report-reference.png`](v2-beta-deep-space-report-reference.png)。图中标题、条目、时间和版本号均为视觉占位，不是项目真实数据；连续报告、单色线性图标、深空蓝 Hero、证据流和历史抽屉才是应继承的设计要点。
 
@@ -202,12 +202,29 @@ AI 不生成 URL；链接只来自 SourceRef、RSS 原始 canonical URL 或经 G
 1. **Gate 3：原始消息链接 404 只读诊断**，已完成；详见主策划的 Gate 3 审计结果。
 2. **Gate 4：Codex 审计 mockup 与数据映射**，已完成；确认核心报告内容可复用，但 `history.json`、来源状态与动态板块摘要尚无现成数据。
 3. **Gate 5：history.json 生成**，已完成；从现有 HTML 快照派生受控公开索引，不包含 `.env`、DB、config、`source_map` 或任何 URL 可用性探测结果。
-4. **Gate 6：前端实现**，由临时子 Agent 接替 glm5.2 负责 HTML/CSS；若无法胜任，再由 DeepSeek 仅接手代码实现，不能跳过视觉标准。
-5. **Gate 7：本地免费验证**，覆盖首页、历史抽屉、旧版提示、8 板块、空态、移动端、链接状态和既有渠道渲染回归。
+4. **Gate 6：前端实现**，已由临时执行 Agent 在隔离分支完成网页专用 HTML/CSS、历史抽屉、`history.html` 与来源展示规则；邮件、飞书、钉钉、Telegram 调用路径未改。
+5. **Gate 7：本地免费验证**，待由 Codex 以 Gate 6 本地提交为基线执行独立审计；不得跳至生产同步。
 
 实现前需确认相邻 TrendRadar fork 的工作树状态；不覆盖已有改动。生产同步、镜像构建、NAS 上传、容器重启、付费 AI 验证均另起闸门并由老板单独确认。
 
-## 八、验收标准
+## 八、Gate 6 本地实现记录（2026-07-10）
+
+代码只存在于隔离 worktree `/Users/shankluo/AI/Claude/TrendRadar-v2-beta-history` 的 `codex/v2-beta-history` 分支，提交顺序如下：
+
+- `c82cc6bb`：网页专用深空研判渲染器。
+- `e3e08f48`：深空报告状态范围修正。
+- `37bed9d6`：历史抽屉与独立 `history.html`。
+- `4d0bc1c4`：快照上下文传递修正。
+- `8f274cce`：公开历史快照路径校验。
+- `ad0be46a`：Nitter 状态 URL 的确定性 `x.com` fallback。
+
+本地临时目录实际生成了 `output/index.html`、时间戳快照、`output/history.json`、`output/history.html` 与 `output/html/latest/daily.html`，并验证了 8 个章节、`data-snapshot-path`、历史抽屉/`ESC`、历史页、Nitter → X fallback、HTML 转义和拒绝 `javascript:` 链接。
+
+来源 fallback 只依据 Nitter 状态 URL 的确定性转换规则生成，不进行运行时外部可用性探测，也不声称 canonical 或 X 页面当时可访问。未知、缺失或非 `http/https` URL 继续保持非链接文本。
+
+尚未执行：合并到 `v2-alpha`、镜像构建、上传 NAS、修改 `.env`、容器重建或重启、付费 AI 调用、Cloudflare 修改、生产部署。
+
+## 九、验收标准
 
 - [ ] 页面首屏清楚区分状态栏、今日结论、真实指标；没有两块相似的大卡片。
 - [ ] 8 板块视觉上是一份连续报告，不是同质卡片墙。
@@ -218,6 +235,6 @@ AI 不生成 URL；链接只来自 SourceRef、RSS 原始 canonical URL 或经 G
 - [ ] 所有数值、时间、版本、来源链接均可追溯到实际数据；缺失时显示真实空态。
 - [ ] 来源链接不再把用户普遍导向已知 404；Gate 3 的诊断结论被落实。
 
-## 九、交接给执行 Agent 的一句话
+## 十、交接给执行 Agent 的一句话
 
 做的是一份可连续阅读的深空研判报告，不是一组发光卡片：**结论优先、报告连续、证据退后、历史按需出现、每一个数字和链接都必须真实。**

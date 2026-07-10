@@ -4,7 +4,7 @@
 >
 > 本文覆盖 v2-beta 首页、历史入口和证据流的视觉与交互重构；它补充并覆盖 `2026-07-10-v2-beta-ui-visual-standards.md` 中与图标语言、卡片结构有关的旧约定。产品边界、历史数据边界、来源追溯要求仍以 `2026-07-09-v2-beta-intelligence-history-ui-design.md` 为准。
 >
-> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」与 Gate 4「Codex 审计 mockup 与数据映射」均已完成。下一闸门为 Gate 5「受控 `history.json` 生成」；仅修改本地 TrendRadar fork，禁止触碰数据库、NAS、容器、Cloudflare 与付费 AI。
+> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」与 Gate 5「受控 `history.json` 生成」均已完成。下一闸门为 Gate 6「深空报告与历史 UI 本地实现」；仅修改隔离 TrendRadar worktree，禁止触碰数据库、NAS、容器、Cloudflare 与付费 AI。
 
 > 视觉参考：[`v2-beta-deep-space-report-reference.png`](v2-beta-deep-space-report-reference.png)。图中标题、条目、时间和版本号均为视觉占位，不是项目真实数据；连续报告、单色线性图标、深空蓝 Hero、证据流和历史抽屉才是应继承的设计要点。
 
@@ -201,7 +201,7 @@ AI 不生成 URL；链接只来自 SourceRef、RSS 原始 canonical URL 或经 G
 
 1. **Gate 3：原始消息链接 404 只读诊断**，已完成；详见主策划的 Gate 3 审计结果。
 2. **Gate 4：Codex 审计 mockup 与数据映射**，已完成；确认核心报告内容可复用，但 `history.json`、来源状态与动态板块摘要尚无现成数据。
-3. **Gate 5：history.json 生成**，只实现受控公开索引；从现有 HTML 快照派生，不包含 `.env`、DB、config、`source_map` 或任何 URL 可用性探测结果。
+3. **Gate 5：history.json 生成**，已完成；从现有 HTML 快照派生受控公开索引，不包含 `.env`、DB、config、`source_map` 或任何 URL 可用性探测结果。
 4. **Gate 6：前端实现**，由临时子 Agent 接替 glm5.2 负责 HTML/CSS；若无法胜任，再由 DeepSeek 仅接手代码实现，不能跳过视觉标准。
 5. **Gate 7：本地免费验证**，覆盖首页、历史抽屉、旧版提示、8 板块、空态、移动端、链接状态和既有渠道渲染回归。
 

@@ -4,7 +4,7 @@
 >
 > 本文覆盖 v2-beta 首页、历史入口和证据流的视觉与交互重构；它补充并覆盖 `2026-07-10-v2-beta-ui-visual-standards.md` 中与图标语言、卡片结构有关的旧约定。产品边界、历史数据边界、来源追溯要求仍以 `2026-07-09-v2-beta-intelligence-history-ui-design.md` 为准。
 >
-> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」已完成。本轮未修改 TrendRadar 源码、未生成 `history.json`、未访问 NAS、未部署、未触发 AI；下一闸门仍是 Gate 3「原始消息链接 404 只读诊断」。
+> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」与 Gate 3「原始消息链接 404 只读诊断」均已完成。Gate 3 已确认存在源站外链 404 与 Nitter 单点风险，未发现本地路由问题；下一闸门为 Gate 4「Codex 审计 mockup 与数据映射」，须老板单独确认后执行。
 
 > 视觉参考：[`v2-beta-deep-space-report-reference.png`](v2-beta-deep-space-report-reference.png)。图中标题、条目、时间和版本号均为视觉占位，不是项目真实数据；连续报告、单色线性图标、深空蓝 Hero、证据流和历史抽屉才是应继承的设计要点。
 
@@ -199,10 +199,10 @@ AI 不生成 URL；链接只来自 SourceRef、RSS 原始 canonical URL 或经 G
 
 实现必须按既定闸门推进，当前不会直接进入代码：
 
-1. **Gate 3：原始消息链接 404 只读诊断**，先识别 URL 构造、Nitter 可用性、源删除、登录限制或历史链接问题。
+1. **Gate 3：原始消息链接 404 只读诊断**，已完成；详见主策划的 Gate 3 审计结果。
 2. **Gate 4：Codex 审计 mockup 与数据映射**，确认新视觉能由现有 AIAnalysisResult / SourceRef 和未来 history manifest 支撑。
 3. **Gate 5：history.json 生成**，只实现数据索引。
-4. **Gate 6：前端实现**，由 glm5.2 负责 HTML/CSS；若额度不足，DeepSeek 仅接手代码实现，不能跳过视觉标准。
+4. **Gate 6：前端实现**，由临时子 Agent 接替 glm5.2 负责 HTML/CSS；若无法胜任，再由 DeepSeek 仅接手代码实现，不能跳过视觉标准。
 5. **Gate 7：本地免费验证**，覆盖首页、历史抽屉、旧版提示、8 板块、空态、移动端、链接状态和既有渠道渲染回归。
 
 实现前需确认相邻 TrendRadar fork 的工作树状态；不覆盖已有改动。生产同步、镜像构建、NAS 上传、容器重启、付费 AI 验证均另起闸门并由老板单独确认。

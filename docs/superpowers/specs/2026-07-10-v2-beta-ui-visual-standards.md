@@ -9,6 +9,7 @@
 > 配套文件：
 > - 策划原文：`docs/superpowers/specs/2026-07-09-v2-beta-intelligence-history-ui-design.md`（硬约束、禁做项、闸门序列的权威来源）
 > - 参考 mockup（如有）：`docs/superpowers/specs/v2-beta-history-ui-preview.html`（历史抽屉与信息密度参考；其彩色 emoji 与同质卡片结构不再作为最终视觉标准）
+> - 深空效果图：`docs/superpowers/specs/v2-beta-deep-space-report-reference.png`（风格与层级参考；其中全部文字、时间、版本和条目均为示意数据）
 >
 > 状态：标准已与老板逐轮确认（2026-07-09 ~ 2026-07-10）。未进入生产代码。
 
@@ -139,6 +140,7 @@
 ## 六、当前 mockup 状态与重建指引
 
 - 已有 mockup：`docs/superpowers/specs/v2-beta-history-ui-preview.html`（抽屉式历史、密度与内容层级参考）。深空研判报告的最终视觉以 `2026-07-10-v2-beta-deep-space-report-ui-design.md` 为准。
+- 深空效果图：`docs/superpowers/specs/v2-beta-deep-space-report-reference.png`（连续报告、单色图标、Hero、证据流和历史抽屉的综合视觉参考，不作为真实数据或最终像素稿）。
 - 若此文件丢失，下一 agent 应**基于本文档第二~五节标准重新生成**，关键还原点：
   1. 深色基底 `#07111f` + 深空蓝 Hero + 连续报告主体，保留克制轻投影反差
   2. 8 板块全宽且连续，每板块单色线性图标 + 编号 + 分散总结 + 4–6 条 [R] 引用

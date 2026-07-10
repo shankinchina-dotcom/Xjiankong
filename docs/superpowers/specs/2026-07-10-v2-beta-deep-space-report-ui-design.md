@@ -6,6 +6,8 @@
 >
 > 设计闸门：Gate 2.5「深空研判报告视觉重构设计」已完成。本轮未修改 TrendRadar 源码、未生成 `history.json`、未访问 NAS、未部署、未触发 AI；下一闸门仍是 Gate 3「原始消息链接 404 只读诊断」。
 
+> 视觉参考：[`v2-beta-deep-space-report-reference.png`](v2-beta-deep-space-report-reference.png)。图中标题、条目、时间和版本号均为视觉占位，不是项目真实数据；连续报告、单色线性图标、深空蓝 Hero、证据流和历史抽屉才是应继承的设计要点。
+
 ## 一、目标与非目标
 
 ### 1.1 目标

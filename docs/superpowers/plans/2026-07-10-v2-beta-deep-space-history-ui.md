@@ -1,6 +1,6 @@
 # v2-beta Gate 6：深空报告与历史 UI 本地实施计划
 
-> 状态：Gate 6 本地实现与免费验证已完成。仅限隔离 worktree `/Users/shankluo/AI/Claude/TrendRadar-v2-beta-history` 的分支 `codex/v2-beta-history`；当前 HEAD 为 `ad0be46a`。
+> 状态：Gate 6 本地实现与 Gate 7 免费独立审计已完成。仅限隔离 worktree `/Users/shankluo/AI/Claude/TrendRadar-v2-beta-history` 的分支 `codex/v2-beta-history`；当前 HEAD 为 `8f7e385a`。
 >
 > 本计划落实已批准的 [`2026-07-10-v2-beta-deep-space-report-ui-design.md`](../specs/2026-07-10-v2-beta-deep-space-report-ui-design.md)。不合并到 `v2-alpha`，不构建镜像、不访问 NAS、不改 `.env`、不重启容器、不调用 AI、不改数据库 schema 或 Cloudflare。
 
@@ -121,13 +121,20 @@ git diff --check
 3. 更新设计规格与本计划：记录本地实现和验证事实，明确仍未合并、未构建镜像、未部署。
 4. 在 Xjiankong 文档仓库运行项目规定文档校验，仅提交这两个文档文件。
 
-**完成记录（2026-07-10）：**
+**完成记录（2026-07-10 至 2026-07-11）：**
 
-- 隔离分支完成提交：`c82cc6bb`、`e3e08f48`、`37bed9d6`、`4d0bc1c4`、`8f274cce`、`ad0be46a`。
+- 隔离分支完成提交：`c82cc6bb`、`e3e08f48`、`37bed9d6`、`4d0bc1c4`、`8f274cce`、`ad0be46a`、`8b68e580`、`0986303f`、`a8d64784`、`8f7e385a`。
 - 本地临时目录生成并检查 `output/index.html`、历史快照、`history.json`、`history.html` 和 `html/latest/daily.html`；产物未保留在主仓库或提交。
-- 五组 fixture 均通过：v2-beta 深空网页 11/11、history manifest 2/2、v2-alpha schema、解析 8/8、HTML 渲染 10/10；相关模块 `py_compile` 与 `git diff --check` 通过。
+- 五组 fixture 均通过：v2-beta 深空网页 15/15、history manifest 2/2、v2-alpha schema、解析 8/8、HTML 渲染 10/10；相关模块 `py_compile` 与 `git diff --check` 通过。
+- Codex 于 2026-07-11 使用本地 HTTP 预览完成浏览器验收：最新状态与当日版数由 manifest 正确写入；旧版提示在最新页不可见；旧白色搜索框被隐藏；RSS 使用低饱和深蓝证据流。预览仅访问 `127.0.0.1`，没有访问生产站点。
 - Task 3 的 Nitter → X fallback 仅按状态 URL 规则确定性生成；不做运行时外部可用性探测，也不改变邮件渠道的来源 HTML。
 - 未合并到 `v2-alpha`，未构建镜像、未上传、未访问 NAS、未修改 `.env`、未重启容器、未调用付费 AI、未修改 Cloudflare 或生产环境。
+
+**Gate 7 审计结论（2026-07-11）：**
+
+- 通过：网页/邮件渲染隔离、8 板块连续报告、历史 manifest/抽屉/独立页、精确快照路径、旧回调兼容、XSS 与非 `http/https` 拒绝、Nitter → X fallback、AI 失败/跳过态历史上下文、RSS 深空证据流。
+- 外部 canonical URL 仍可能因源站删除、登录或地区限制失效；本轮按设计不运行时探测，不承诺所有外部页面永久可用。
+- 下一步不是直接生产同步，而是单独决定如何把 `codex/v2-beta-history` 集成到 `v2-alpha`；合并、镜像、NAS 和公网验证仍需新的生产闸门。
 
 **验证：**
 

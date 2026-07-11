@@ -1,10 +1,10 @@
 # v2-beta 深空研判报告 UI 重构设计
 
-> 状态：**本地代码实现与免费验证已完成，尚未合并或部署。**
+> 状态：**本地代码实现与 Gate 7 免费独立审计已完成，尚未合并或部署。**
 >
 > 本文覆盖 v2-beta 首页、历史入口和证据流的视觉与交互重构；它补充并覆盖 `2026-07-10-v2-beta-ui-visual-standards.md` 中与图标语言、卡片结构有关的旧约定。产品边界、历史数据边界、来源追溯要求仍以 `2026-07-09-v2-beta-intelligence-history-ui-design.md` 为准。
 >
-> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」、Gate 5「受控 `history.json` 生成」与 Gate 6「深空报告与历史 UI 本地实现」均已完成。Gate 6 仅在隔离 TrendRadar worktree 的分支 `codex/v2-beta-history` 完成，尚未合并到 `v2-alpha`，未构建镜像、未部署生产。
+> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」、Gate 5「受控 `history.json` 生成」、Gate 6「深空报告与历史 UI 本地实现」与 Gate 7「本地免费独立审计」均已完成。代码仅在隔离 TrendRadar worktree 的分支 `codex/v2-beta-history`，尚未合并到 `v2-alpha`，未构建镜像、未部署生产。
 
 > 视觉参考：[`v2-beta-deep-space-report-reference.png`](v2-beta-deep-space-report-reference.png)。图中标题、条目、时间和版本号均为视觉占位，不是项目真实数据；连续报告、单色线性图标、深空蓝 Hero、证据流和历史抽屉才是应继承的设计要点。
 
@@ -203,7 +203,7 @@ AI 不生成 URL；链接只来自 SourceRef、RSS 原始 canonical URL 或经 G
 2. **Gate 4：Codex 审计 mockup 与数据映射**，已完成；确认核心报告内容可复用，但 `history.json`、来源状态与动态板块摘要尚无现成数据。
 3. **Gate 5：history.json 生成**，已完成；从现有 HTML 快照派生受控公开索引，不包含 `.env`、DB、config、`source_map` 或任何 URL 可用性探测结果。
 4. **Gate 6：前端实现**，已由临时执行 Agent 在隔离分支完成网页专用 HTML/CSS、历史抽屉、`history.html` 与来源展示规则；邮件、飞书、钉钉、Telegram 调用路径未改。
-5. **Gate 7：本地免费验证**，待由 Codex 以 Gate 6 本地提交为基线执行独立审计；不得跳至生产同步。
+5. **Gate 7：本地免费验证**，已由 Codex 于 2026-07-11 完成自动化回归、静态审计和本地浏览器验收；不得跳至生产同步。
 
 实现前需确认相邻 TrendRadar fork 的工作树状态；不覆盖已有改动。生产同步、镜像构建、NAS 上传、容器重启、付费 AI 验证均另起闸门并由老板单独确认。
 
@@ -217,23 +217,29 @@ AI 不生成 URL；链接只来自 SourceRef、RSS 原始 canonical URL 或经 G
 - `4d0bc1c4`：快照上下文传递修正。
 - `8f274cce`：公开历史快照路径校验。
 - `ad0be46a`：Nitter 状态 URL 的确定性 `x.com` fallback。
+- `8b68e580`：manifest 驱动的版本状态、正文旧版提示与 RSS 深空证据流。
+- `0986303f`：旧版提示移至报告顶栏与 Hero 之间。
+- `a8d64784`：AI 失败或跳过时保留历史上下文外壳。
+- `8f7e385a`：隐藏深空页旧搜索框，并修正最新页隐藏提示的计算样式。
 
-本地临时目录实际生成了 `output/index.html`、时间戳快照、`output/history.json`、`output/history.html` 与 `output/html/latest/daily.html`，并验证了 8 个章节、`data-snapshot-path`、历史抽屉/`ESC`、历史页、Nitter → X fallback、HTML 转义和拒绝 `javascript:` 链接。
+本地临时目录实际生成了 `output/index.html`、时间戳快照、`output/history.json`、`output/history.html` 与 `output/html/latest/daily.html`，并验证了 8 个章节、`data-snapshot-path`、历史抽屉/`ESC`、历史页、Nitter → X fallback、HTML 转义和拒绝 `javascript:` 链接。Gate 7 自动化结果为：v2-beta 深空网页 15/15、history manifest 2/2、v2-alpha schema、解析 8/8、HTML 渲染 10/10；相关模块编译和差异检查通过。
+
+Codex 又通过 `127.0.0.1` 本地预览检查了实际计算样式：顶栏显示“最新”和“今日 1 版”，最新页的旧版提示为不可见，旧搜索框为不可见，RSS 证据流为低饱和深蓝背景。该浏览器检查未访问生产站点。
 
 来源 fallback 只依据 Nitter 状态 URL 的确定性转换规则生成，不进行运行时外部可用性探测，也不声称 canonical 或 X 页面当时可访问。未知、缺失或非 `http/https` URL 继续保持非链接文本。
 
-尚未执行：合并到 `v2-alpha`、镜像构建、上传 NAS、修改 `.env`、容器重建或重启、付费 AI 调用、Cloudflare 修改、生产部署。
+尚未执行：合并到 `v2-alpha`、镜像构建、上传 NAS、修改 `.env`、容器重建或重启、付费 AI 调用、Cloudflare 修改、生产部署。外部 canonical URL 仍可能因源站删除、登录或地区限制失效；本轮不进行运行时可用性探测。
 
 ## 九、验收标准
 
-- [ ] 页面首屏清楚区分状态栏、今日结论、真实指标；没有两块相似的大卡片。
-- [ ] 8 板块视觉上是一份连续报告，不是同质卡片墙。
-- [ ] 全站使用统一单色线性 SVG 图标，页面不残留彩色 emoji 作为系统图标。
-- [ ] Hero、当前版本与普通区域存在清晰但克制的蓝色层级。
-- [ ] RSS/热榜作为证据层，视觉权重低于研判正文。
-- [ ] 历史抽屉默认零占用，支持遮罩、关闭按钮和 `ESC`。
-- [ ] 所有数值、时间、版本、来源链接均可追溯到实际数据；缺失时显示真实空态。
-- [ ] 来源链接不再把用户普遍导向已知 404；Gate 3 的诊断结论被落实。
+- [x] 页面首屏清楚区分状态栏、今日结论、真实指标；没有两块相似的大卡片。
+- [x] 8 板块视觉上是一份连续报告，不是同质卡片墙。
+- [x] 深空报告使用统一单色线性 SVG 图标，不使用彩色 emoji 作为系统图标。
+- [x] Hero、当前版本与普通区域存在清晰但克制的蓝色层级。
+- [x] RSS 作为证据层，视觉权重低于研判正文。
+- [x] 历史抽屉默认零占用，支持遮罩、关闭按钮和 `ESC`。
+- [x] 所有数值、时间与版本均来自实际报告或 manifest；缺失时显示真实空态。
+- [x] Nitter 状态来源提供确定性 X fallback；无 URL 或非 `http/https` 不生成链接。
 
 ## 十、交接给执行 Agent 的一句话
 

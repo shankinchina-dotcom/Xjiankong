@@ -23,6 +23,7 @@
 | 路径 | 作用 | 维护规则 |
 |---|---|---|
 | `ai-intelligence-hub-design.md` | 活动架构、数据边界和 K/AI 实验方法 | 只描述当前主线；历史方案只保留归档链接 |
+| `docs/roadmap.md` | 项目主进度源：阶段顺序、状态、依赖、确认闸门与验证入口 | 每次完成开发、部署、重要调研或状态变化后先更新；只记录已验证事实，并链接到详细规格或实施计划 |
 | `docs/requirements.md` | GitHub AI 追踪原始需求 | 需求变化先改此文件 |
 | `docs/github-ai-tracking-plan.md` | GitHub/HuggingFace/Release RSS 接入记录 | 必须区分“已接入”和“指标能力待复核” |
 | `docs/archive/` | 已放弃或暂停的历史方案 | 不作为执行入口；恢复前重新核验外部依赖 |

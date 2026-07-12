@@ -169,13 +169,14 @@
 | Gate 1 | 设计确认 | 已确认（本文 + 原文） |
 | Gate 2 | glm5.2 历史 UI mockup（仅 /tmp 或 docs） | **已完成**（抽屉式历史版交付） |
 | Gate 2.5 | Codex 深空研判报告视觉重构设计 | **已完成**（老板已确认，未改代码） |
-| Gate 3 | 原始消息链接 404 只读诊断 | 未启动（建议进入代码前先做） |
-| Gate 4 | Codex 审计 mockup（能否用 history.json 支撑、是否兼容 8 板块） | 未启动 |
-| Gate 5 | DeepSeek 实现 history.json 生成（改 generator.py） | 未启动 |
-| Gate 6 | glm5.2/DeepSeek 实现历史 UI（改 html.py） | 未启动 |
-| Gate 7 | 本地完整免费验证 | 未启动 |
-| Gate 8 | 本地提交 | 未启动 |
-| Gate 9 | 生产同步计划（另起，复用 v2-alpha 镜像闸门） | 未启动 |
+| Gate 3 | 原始消息链接 404 只读诊断 | **已完成**（定位为外部源站可用性与 Nitter 单点风险） |
+| Gate 4 | Codex 审计 mockup（能否用 history.json 支撑、是否兼容 8 板块） | **已完成**（数据映射可行） |
+| Gate 5 | 实现 history.json 生成（改 generator.py） | **已完成**（受控 manifest 与 fixture 通过） |
+| Gate 6 | 实现历史 UI（改 html.py） | **已完成**（深空报告、历史抽屉与归档页） |
+| Gate 7 | 本地完整免费验证 | **已完成**（自动化回归、静态审计与浏览器验收通过） |
+| Gate 8 | 发布候选冻结 | **已完成**（`codex/v2-beta-rc` / `8f7e385a`） |
+| Gate 9 | 本地 RC 镜像构建与一次性容器验证 | **阻塞**（Docker Engine／BuildKit registry metadata／pull 通道） |
+| Gate 10 | 生产同步计划 | 未启动；须在 Gate 9 通过后另起并单独确认 |
 
 ---
 

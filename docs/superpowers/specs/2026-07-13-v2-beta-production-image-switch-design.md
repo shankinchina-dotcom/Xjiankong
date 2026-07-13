@@ -1,19 +1,19 @@
 # v2-beta 生产镜像单点升级设计
 
-> 状态：已获老板确认采用“方案 1：镜像单点升级”；本文只定义 Gate 10 的生产同步与回滚边界，不代表任何 NAS 写入已经执行。
+> 状态：已获老板确认采用修正版“方案 1：镜像单点升级 + 两个历史文件精确白名单”；本文只定义 Gate 10 的生产同步与回滚边界，不代表任何 NAS 写入已经执行。
 
 ## 一、目标
 
-把 Gate 9 已验证的本地镜像 `xjiankong-trendradar:v2-beta-rc-20260712` 同步到群晖 NAS，并仅切换生产 `trendradar` 容器使用的镜像。现有 Compose、运行配置、代理配置、输出数据、`report-web`、`cloudflared`、`rss-proxy` 和 Cloudflare 路由全部保持不变。
+把 Gate 9 已验证的本地镜像 `xjiankong-trendradar:v2-beta-rc-20260712` 同步到群晖 NAS，切换生产 `trendradar` 容器使用的镜像；同时只为 `/history.json` 和 `/history.html` 增加 Nginx 精确白名单。现有 Compose、运行配置、代理配置、输出数据、`cloudflared`、`rss-proxy` 和 Cloudflare 路由全部保持不变。
 
 成功标准不是“新容器能启动”，而是以下证据同时成立：
 
 1. NAS 导入后的镜像身份与 Gate 9 完全一致。
-2. 生产切换只改变 `.env` 的 `TRENDRADAR_IMAGE` 一行，只重建 `trendradar`。
+2. 生产切换只改变 `.env` 的 `TRENDRADAR_IMAGE` 一行和 Nginx 两个精确 location，只重建 `trendradar` 与 `report-web`。
 3. 旧日报、旧快照和 SQLite 数据不被覆盖或迁移。
 4. 一次经批准的生产采集完成热榜、RSS、翻译、AI 分析和 v2-beta 历史功能验证。
 5. 公网敏感路径继续为 404，且没有新增宿主机端口。
-6. 任一关键验收失败时，可以把镜像行恢复到部署前记录值并只重建 `trendradar`。
+6. 任一关键验收失败时，可以恢复部署前镜像行与 `nginx.conf`，并只重建 `trendradar` 与 `report-web`。
 
 ## 二、冻结输入
 
@@ -36,20 +36,21 @@
 
 1. NAS 导入固定 RC 镜像。
 2. 在受限备份完成后，把 NAS `.env` 的 `TRENDRADAR_IMAGE` 从部署前记录值改为 `xjiankong-trendradar:v2-beta-rc-20260712`。
-3. 执行等价于 `docker compose up -d trendradar` 的单服务重建。
+3. 在 NAS `nginx.conf` 中只增加 `/history.json` 与 `/history.html` 的精确匹配。
+4. 执行等价于 `docker compose up -d trendradar report-web` 的双服务重建。
 
 ### 3.2 明确不变
 
-- 不上传或覆盖 `docker-compose.yml`。
+- 不上传或覆盖 `docker-compose.yml`；Nginx 只允许增加两个已批准精确 location。
 - 不同步仓库 `config/`，不改 NAS 实际 `config/` 和 prompt。
 - 不读取、输出或改写 `.env` 的密钥、Token、AI 模型、调度和开关。
 - 不触碰 NAS `proxy/config.yaml`、代理运行数据或订阅 URL。
 - 不覆盖、迁移、删除 `output/`、SQLite 或历史快照。
-- 不重建 `report-web`、`cloudflared`、`rss-proxy`。
+- 除因 Nginx 白名单重建 `report-web` 外，不重建 `cloudflared`、`rss-proxy`。
 - 不修改 Cloudflare Tunnel、DNS、WAF、Access 或域名路由。
 - 不删除旧镜像、RC 归档、备份或失败现场。
 
-本地 `deploy/nas/` 当前存在未提交的四容器/Nitter 模板变更和真实代理配置。它们不属于 Gate 10 发布集合，不得提交、打包、上传或作为 NAS 当前状态的替代证据；部署模板清理另起任务。
+本地 `deploy/nas/` 当前存在未提交的四容器/Nitter 模板变更和真实代理配置。除 `nginx.conf` 已确认的两个精确白名单外，它们不属于 Gate 10 发布集合，不得提交、打包、上传或作为 NAS 当前状态的替代证据；部署模板清理另起任务。
 
 ## 四、分闸门执行
 
@@ -71,11 +72,11 @@
 
 ### Gate 10C：镜像切换与免费生产验收
 
-**允许：** 经老板确认后只修改 `.env` 的 `TRENDRADAR_IMAGE` 一行，并只重建 `trendradar`。
+**允许：** 经老板确认后只修改 `.env` 的 `TRENDRADAR_IMAGE` 一行、用经本地语法与安全测试通过的 Nginx 文件替换 NAS `nginx.conf`，并只重建 `trendradar` 与 `report-web`。
 
-**禁止：** 修改其他 `.env` 行、Compose、配置、代理、输出、其他容器或 Cloudflare；不得人工触发采集。
+**禁止：** 修改其他 `.env` 行、Compose、运行配置、代理、输出、除两个精确白名单外的 Nginx 规则、其他容器或 Cloudflare；不得人工触发采集。
 
-**通过条件：** 四容器保持运行，`report-web` healthy；`trendradar` 使用固定 RC 镜像且无持续重启；挂载、网络和非敏感环境摘要未漂移；旧 `index.html` 和旧快照仍可访问；敏感路径仍为 404。
+**通过条件：** 四容器保持运行，`report-web` healthy；`trendradar` 使用固定 RC 镜像且无持续重启；Nginx 只有两个精确白名单差异；挂载、网络和非敏感环境摘要未漂移；旧 `index.html` 和旧快照仍可访问；其他 `.json` 与敏感路径仍为 404。
 
 首次新报告生成前，`/history.json` 和 `/history.html` 仍可能是 404，不作为 Gate 10C 失败条件。
 
@@ -99,14 +100,14 @@
 新的 Gate 10 备份点必须包含或记录：
 
 1. 部署前 `trendradar` 容器实际镜像 ID、标签、平台和大小。
-2. 当前 `docker-compose.yml`。
+2. 当前 `docker-compose.yml` 与 `nginx.conf`。
 3. `.env` 的受限完整备份；报告只允许出现 `TRENDRADAR_IMAGE` 的旧值和非敏感键存在性，不输出其他内容。
 4. `config/config.yaml`、`config/ai_analysis_prompt.txt`、`config/frequency_words.txt`、`config/timeline.yaml` 的受限备份或校验摘要。
 5. `proxy/config.yaml` 只保留 NAS 原文件或 NAS 端受限备份，不传回本地、不输出内容。
 6. `output/news/`、`output/rss/`、`output/html/` 的存在性、文件数、最新时间和容量；`output/index.html` 的 mtime 与 SHA-256。
 7. 旧镜像仍可被 Docker 精确引用的证据。
 
-回滚时只恢复 `.env` 中部署前的 `TRENDRADAR_IMAGE`，以旧 Compose 和配置为准，只重建 `trendradar`。保留 `output/`、SQLite、新快照、RC 镜像、传输归档和备份，不修改其他三个容器或 Cloudflare，不再次触发付费采集。
+回滚时只恢复 `.env` 中部署前的 `TRENDRADAR_IMAGE` 和备份的 `nginx.conf`，以旧 Compose 和配置为准，只重建 `trendradar` 与 `report-web`。保留 `output/`、SQLite、新快照、RC 镜像、传输归档和备份，不修改 `rss-proxy`、`cloudflared` 或 Cloudflare，不再次触发付费采集。
 
 ## 六、回滚触发条件
 
@@ -129,7 +130,7 @@
 |---|---|---|---|
 | Gate 10A 只读基线采集 | Terra 高 | 命令边界清楚，但需理解 Docker/NAS 状态 | 固定字段输出、敏感扫描、主控逐项比对 |
 | Gate 10B 备份、归档与加载 | Terra 高 | 机械执行为主，涉及可回滚生产文件 | SHA-256、镜像 inspect、备份清单、免费断言 |
-| Gate 10C 生产镜像切换 | Sol 高 | 生产写入与回滚关键节点 | 修改前后单行差异、容器/挂载/网络/安全路径独立验收 |
+| Gate 10C 生产镜像与 Nginx 白名单切换 | Sol 高 | 生产写入与回滚关键节点 | 镜像单行差异、Nginx 两个精确 location、容器/挂载/网络/安全路径独立验收 |
 | Gate 10D 全链路验收 | Sol 中 | 需要综合热榜、RSS、AI 与历史证据 | 同一次运行日志、报告结构、HTTP 与 JSON 检查 |
 | Gate 10 最终结论 | Sol 高 | 跨 Agent 最终验收和生产风险判断 | 对照冻结输入、白名单差异、回滚证据完整性 |
 
@@ -139,7 +140,7 @@
 
 **Gate name：** Gate 10 v2-beta 生产镜像单点升级。
 
-**Goal：** 在不改变现有生产架构和数据边界的前提下，把 `trendradar` 切换到已验证的 v2-beta RC，并证明可回滚。
+**Goal：** 在不改变现有生产架构和数据边界的前提下，把 `trendradar` 切换到已验证的 v2-beta RC，只开放两个历史文件，并证明可回滚。
 
 **Allowed actions：** 仅限当前被老板明确批准的单个子闸门。
 

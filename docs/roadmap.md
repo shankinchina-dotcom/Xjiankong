@@ -1,6 +1,6 @@
 # Xjiankong 项目路线图
 
-> 更新日期：2026-07-12。
+> 更新日期：2026-07-13。
 >
 > 本文件是项目的**主进度源**。进入项目后，先阅读根目录 `AGENTS.md`、适用的 `CLAUDE.md` 与本文件；再按链接进入对应的规格或实施计划。详细计划不等于已完成：只有实际验证过的结果才可改变本文件的状态。
 
@@ -8,14 +8,14 @@
 
 - 活动架构：A1 / TrendRadar；X Hosted MCP 已归档，不属于活动架构。
 - 生产基线：`xjiankong-trendradar:v2-alpha-20260709`，TrendRadar `v2-alpha` / `33d80973`。
-- v2-beta RC：`codex/v2-beta-rc` / `8f7e385ac1453521a7ffffa9c5de43d725af76b9`；本地代码、免费回归和 RC 冻结已完成，尚未构建、上传或部署。
+- v2-beta RC：功能基线 `8f7e385ac1453521a7ffffa9c5de43d725af76b9`，Docker 构建兼容性提交 `5c02c6ce`；本地镜像与一次性容器验证已完成，尚未上传或部署。
 - 当前采集来源：中文热榜、X 账号 RSS、GitHub/HuggingFace/Release RSS。小红书和公众号尚未接入。
 
 ## 二、执行顺序与状态
 
 | 顺序 | 阶段 | 状态 | 前置条件 | 产出与验证 | 推荐模型 |
 |---|---|---|---|---|---|
-| 1 | Gate 9：本地 RC 镜像与临时容器验证 | 阻塞 | Docker Engine/BuildKit registry metadata/pull 通道恢复；执行前需老板确认删除本次构建产生的 714B 无效 Python 标签 | 本地 `linux/amd64` RC 镜像；`RC_IMPORT_OK`、`RC_CONTAINER_OK`；无常驻验证容器 | Terra 高 |
+| 1 | Gate 9：本地 RC 镜像与临时容器验证 | 已完成 | 2026-07-13：固定镜像身份后，`RC_IMPORT_OK`、`RC_CONTAINER_OK` 均以退出码 0 通过，且无常驻验证容器 | `xjiankong-trendradar:v2-beta-rc-20260712`；详见 Gate 9 实施计划 | Terra 高 |
 | 2 | Gate 10：v2-beta 生产同步与回滚方案 | 未开始 | Gate 9 完成并记录镜像 ID、架构、大小与容器验证结果 | 单独的生产同步计划、回滚步骤和上线验收清单；仅在老板明确确认后执行 | Sol 高 |
 | 3 | v2-beta 上线后稳定性观察 | 未开始 | Gate 10 已获批准并完成生产部署 | 连续记录热榜、RSS、翻译、AI 分析、历史快照和公网安全路径；异常必须标明来源与影响 | Terra 高 |
 | 4 | K/AI 过滤实验 | 未开始 | 冻结连续 7 天的同批新闻与 RSS SQLite 快照；建立不少于 300 条人工标注集 | 同快照下的 Variant K/AI 精确率、重要事件漏报、人工复核量与成本对比 | Sol 中 |
@@ -25,21 +25,39 @@
 
 除阶段 3 的稳定性观察与阶段 4 的离线样本准备可并行外，其他阶段必须按顺序推进。阶段 5 只允许研究与设计，不允许接入、部署或修改生产配置。
 
-## 三、Gate 9：唯一当前执行项
+## 三、Gate 9：已完成
 
 **目标：** 从冻结 RC 构建本地 `linux/amd64` 镜像，并在无生产配置的一次性容器中完成免费验证。
 
-**当前阻塞：** Docker Engine/BuildKit 在 GHCR 与 Docker Hub 的 metadata/pull 通道超时。`uv` stage cache 已验证；Python base cache 的首次导入失败，仅留下本次任务生成的 714B 无效标签。
+**最终结果：** `xjiankong-trendradar:v2-beta-rc-20260712` 已构建为 `linux/amd64` 镜像，ID `sha256:91983de58c07a12c9fc0ada28474e1d48de26b5a126c3d8fd7f6971f7a748ee4`，大小 `138,047,386` bytes。
 
-**受控恢复边界：** 只可删除该已记录的无效标签、用官方 OCI layers 重建 Python base cache，然后只重试一次本地 build 与一次性容器验证。不得修改 Dockerfile、Docker Desktop 设置、镜像源、NAS、`.env`、现有容器、Cloudflare 或生产环境。
+**完成边界：** Gate 9 只产生本地 base cache、最小 Dockerfile 兼容性提交、本地 RC 镜像与一次性验证容器；未上传镜像，未访问 NAS、`.env`、现有生产容器、Cloudflare 或付费 AI。
 
-**确认闸门：** 清理无效标签虽精确且可验证，仍属删除操作；必须获得老板在当前对话中的明确授权。
+**确认闸门：** 老板已在当前对话明确开始 Gate 9。清理范围仍只限已核验的 714B 标签；导入的 Python base cache 必须先通过官方 OCI config 等价性闸门，才允许重试构建。
 
-**详细入口：** [Gate 9 实施计划](superpowers/plans/2026-07-11-v2-beta-rc-image-validation.md)、[Gate 9 阻塞记录](superpowers/specs/2026-07-10-v2-beta-deep-space-report-ui-design.md)。
+**2026-07-12 执行记录：** 执行 Agent 在删除前完成 RC、Docker、714B 标签和 uv cache 的只读复核；其临时 OCI 恢复脚本的 Registry 前置查询没有返回可审计 stdout/stderr，遂按停止条件停止并清理临时脚本。没有删除、下载 layer、写 rootfs、导入镜像、构建、运行容器或访问生产。主控直接验证 `HEAD https://registry-1.docker.io/v2/` 可稳定返回公开的 `401 Bearer` challenge，故当前未知点限定为恢复脚本的可观测性，不是 Docker Hub 路由不可达。下一步仅是新的只读逐阶段可观测性预检。
+
+**2026-07-12 预检通过记录：** 修正规则后，执行 Agent 以 HTTP `401` 加 Bearer challenge 作为 `HEAD /v2/` 成功条件；Registry token 仅存在于进程内，manifest 查询返回 HTTP `200` 并解析到 7 个架构描述符。临时脚本和 6 行无敏感日志均已清理。该预检不证明 OCI layer/config 或 base cache 恢复，仅允许重新开始 Gate 9 的删除前精确核验。
+
+**2026-07-12 恢复尝试记录：** 执行 Agent 再次核验后，仅删除 `python:3.12-slim-bookworm` 的已记录 714B 无效标签，并立即确认标签不存在；唯一 `linux/amd64` child manifest 与 digest 校验通过。官方 config blob 的原始字节未与 descriptor sha256 匹配，脚本未证明是否正确处理 Registry 重定向，遂停止。没有下载 layer、写 rootfs、import、build、容器运行、项目文件或生产操作；临时脚本、日志和目录均已清理。下一步仅为只读 Gate 9B 传输保真审计。
+
+**2026-07-12 Gate 9B 通过记录：** config blob 初始 endpoint 返回 307 且有 Location；安全跟随后为 HTTP 200，最终原始字节 sha256 与官方 descriptor 完全一致。日志只含状态、布尔值和退出码，敏感扫描无命中并已清理。该结果仅解除 config blob 传输疑点；layers、DiffID、rootfs、import config 等价性和 RC 构建仍待验证。
+
+**恢复路径修订：** 本机没有 `skopeo`、`crane`、`regctl`、`oras` 等专用 OCI 工具，手工 rootfs 路径又两次止于脚本可观测性。Gate 9 改用无新增依赖的 Docker load archive：对官方 config/layers 做原始 digest 与 DiffID 校验后，以官方原始 config 和未压缩 layer tar 构造临时 Docker image archive，再由 `docker load` 应用 layers。该路径不手工处理 whiteout，也不使用会丢失 config 的 `docker import`；仍只生成本地缓存、不得上传或接触生产。
+
+**2026-07-12 base cache／build 记录：** Docker load archive 恢复通过，`python:3.12-slim-bookworm` 当前为 `linux/amd64`、`129,079,727` bytes，Python 运行验证通过，临时 archive/blob/layer/日志均已清理。随后按“仅一次”约束执行 RC build，失败于 Dockerfile 的构建期 `supercronic -version`：本机 ARM Docker 在模拟执行 amd64 Go 二进制时崩溃。RC 镜像未生成，未重试，未运行 RC 容器验证。下一步是单独的最小兼容性修复 Gate：保留 supercronic 下载 SHA-1 校验和运行时二进制，只移除该构建期跨架构执行自检。
+
+**2026-07-13 构建兼容性修复记录：** 隔离 worktree 提交 `5c02c6ce` 仅将构建期 `supercronic -version` 改为 `/usr/local/bin/supercronic` 的可执行权限断言；下载 SHA-1 校验、路径和运行时行为未变。唯一重新 build 成功，RC 镜像 `xjiankong-trendradar:v2-beta-rc-20260712` 为 `linux/amd64`、`138,047,386` bytes。第一次 `RC_IMPORT_OK` 临时容器没有留下成功输出，故不记为通过；容器已自动移除，尚未执行后续 `RC_CONTAINER_OK`。下一步仅为不重建镜像的可观测容器验证 Gate。
+
+**2026-07-13 Gate 9.6 停止记录：** 执行 Agent 以 120 秒超时启动原 `RC_IMPORT_OK`，但执行通道结束后没有返回 stdout、stderr、退出码，且预定系统临时日志不可见；因此没有可审计成功证据。严格未执行 `RC_CONTAINER_OK`，最终无基于 RC 镜像的容器。下一步必须更换为能可靠保留命令输出和临时日志的执行上下文；不得在当前通道继续重复容器断言。
+
+**2026-07-13 Gate 9.7 完成记录：** 独立 Agent 先只读审计原断言与执行边界；主控随后在可保留输出的本地会话中对固定镜像顺序执行两条一次性容器断言。`RC_IMPORT_OK` 与 `RC_CONTAINER_OK` 均为退出码 0 且只有对应成功标记；最终 `docker ps -a --filter ancestor=xjiankong-trendradar:v2-beta-rc-20260712` 无输出，镜像身份未漂移。新的独立验收 Agent 复核证据链后同意 Gate 9 完成；未执行 Gate 10 或任何生产动作。
+
+**详细入口：** [Gate 9 实施计划](superpowers/plans/2026-07-11-v2-beta-rc-image-validation.md)、[v2-beta 设计与 Gate 9 验证记录](superpowers/specs/2026-07-10-v2-beta-deep-space-report-ui-design.md)。
 
 ## 四、Gate 10 与稳定性观察
 
-Gate 10 不得在 Gate 9 前编造为可执行部署步骤。Gate 9 通过后，以实际镜像 ID、平台、大小、容器验证结果和 NAS 当前状态为输入，单独制定：备份点、传输方式、镜像切换、容器重建、功能验收、公开路径安全检查、失败回滚和停止条件。
+Gate 10 以 Gate 9 的实际镜像 ID、平台、大小和容器验证结果为输入，另行制定：备份点、传输方式、镜像切换、容器重建、功能验收、公开路径安全检查、失败回滚和停止条件。计划完成后仍须老板单独确认，不能因 Gate 9 完成而自动执行。
 
 生产部署、NAS 操作、`.env` 改动、容器重建、Cloudflare 变更、付费 AI 调用均需要老板在当前对话中逐项确认。稳定性观察只记录实际结果；不得把单次成功写成长期稳定。
 
@@ -77,6 +95,6 @@ Gate 10 不得在 Gate 9 前编造为可执行部署步骤。Gate 9 通过后，
 
 - [活动架构与数据边界](../ai-intelligence-hub-design.md)
 - [Gate 9 本地镜像验证计划](superpowers/plans/2026-07-11-v2-beta-rc-image-validation.md)
-- [v2-beta 设计与 Gate 9 阻塞记录](superpowers/specs/2026-07-10-v2-beta-deep-space-report-ui-design.md)
+- [v2-beta 设计与 Gate 9 验证记录](superpowers/specs/2026-07-10-v2-beta-deep-space-report-ui-design.md)
 - [AIGC 应用风向的既有设计](superpowers/specs/2026-07-09-v2-beta-intelligence-history-ui-design.md)
 - [GitHub AI 追踪现状](github-ai-tracking-plan.md)

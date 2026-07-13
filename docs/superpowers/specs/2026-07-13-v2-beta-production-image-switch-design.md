@@ -4,11 +4,11 @@
 
 ## 一、目标
 
-把 Gate 9 已验证的本地镜像 `xjiankong-trendradar:v2-beta-rc-20260712` 同步到群晖 NAS，切换生产 `trendradar` 容器使用的镜像；同时只为 `/history.json` 和 `/history.html` 增加 Nginx 精确白名单。现有 Compose、运行配置、代理配置、输出数据、`cloudflared`、`rss-proxy` 和 Cloudflare 路由全部保持不变。
+把 Gate 9.1 重新冻结并验证的本地镜像 `xjiankong-trendradar:v2-beta-rc-20260713` 同步到群晖 NAS，切换生产 `trendradar` 容器使用的镜像；同时只为 `/history.json` 和 `/history.html` 增加 Nginx 精确白名单。现有 Compose、运行配置、代理配置、输出数据、`cloudflared`、`rss-proxy` 和 Cloudflare 路由全部保持不变。
 
 成功标准不是“新容器能启动”，而是以下证据同时成立：
 
-1. NAS 导入后的镜像身份与 Gate 9 完全一致。
+1. NAS 导入后的镜像身份与 Gate 9.1 完全一致。
 2. 生产切换只改变 `.env` 的 `TRENDRADAR_IMAGE` 一行和 Nginx 两个精确 location，只重建 `trendradar` 与 `report-web`。
 3. 旧日报、旧快照和 SQLite 数据不被覆盖或迁移。
 4. 一次经批准的生产采集完成热榜、RSS、翻译、AI 分析和 v2-beta 历史功能验证。
@@ -21,11 +21,12 @@
 |---|---|
 | 功能 RC 基线 | `8f7e385ac1453521a7ffffa9c5de43d725af76b9` |
 | Docker 构建兼容性提交 | `5c02c6ce` |
-| 本地镜像标签 | `xjiankong-trendradar:v2-beta-rc-20260712` |
-| 本地镜像 ID | `sha256:91983de58c07a12c9fc0ada28474e1d48de26b5a126c3d8fd7f6971f7a748ee4` |
+| Gate 9.1 最终 HEAD | `61ba393225de1b6d9d165a1dcddc189073f3e2d6` |
+| 本地镜像标签 | `xjiankong-trendradar:v2-beta-rc-20260713` |
+| 本地镜像 ID | `sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f` |
 | 平台 | `linux/amd64` |
-| 大小 | `138047386` bytes |
-| Gate 9 断言 | `RC_IMPORT_OK`、`RC_CONTAINER_OK`，退出码均为 0 |
+| 大小 | `138032730` bytes |
+| Gate 9.1 断言 | `RC_IMPORT_OK`、`RC_CONTAINER_OK`，退出码均为 0 |
 | 已知生产版本 | `xjiankong-trendradar:v2-alpha-20260709`；NAS 实际镜像 ID 须在 Gate 10A 重新读取 |
 
 镜像传输必须使用 `docker save` / `docker load`，不得使用会丢失镜像配置的 `docker export` / `docker import`。传输归档必须记录 SHA-256 和大小，NAS 加载后重新检查镜像 ID、平台和大小。
@@ -35,7 +36,7 @@
 ### 3.1 唯一生产变更
 
 1. NAS 导入固定 RC 镜像。
-2. 在受限备份完成后，把 NAS `.env` 的 `TRENDRADAR_IMAGE` 从部署前记录值改为 `xjiankong-trendradar:v2-beta-rc-20260712`。
+2. 在受限备份完成后，把 NAS `.env` 的 `TRENDRADAR_IMAGE` 从部署前记录值改为 `xjiankong-trendradar:v2-beta-rc-20260713`。
 3. 在 NAS `nginx.conf` 中只增加 `/history.json` 与 `/history.html` 的精确匹配。
 4. 执行等价于 `docker compose up -d trendradar report-web` 的双服务重建。
 
@@ -150,4 +151,4 @@
 
 **Stop conditions：** 出现未知差异、敏感信息风险、回滚证据不足、校验失败、生产状态与文档不一致或需要扩大变更范围。
 
-**Next Owner after design：** 老板审阅本文；确认后由 Codex 编写逐命令实施计划，不直接进入 NAS 执行。
+**Next Owner：** 老板。设计与逐命令实施计划均已确认；Gate 10A-1 首次只读 SSH 预检连接超时且未建立会话、未读取 NAS、未执行写入。网络恢复后由老板确认从 10A-1 重试，完成 10A 前禁止进入 10B。

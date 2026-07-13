@@ -1,10 +1,10 @@
 # v2-beta 生产同步实施计划 (Gate 10)
 
-> 状态：**修正版设计已确认，逐闸门实施计划已编写；尚未访问 NAS 或执行生产操作。下一步仅为 Gate 10A 只读核验。**
+> 状态：**修正版设计已确认，逐闸门实施计划已编写。Gate 10A-1 首次只读 SSH 预检连接超时，未建立会话、未读取 NAS、未执行写入；网络恢复后仅从 10A-1 重试，禁止进入 10B。**
 >
 > 设计依据：[v2-beta 生产镜像单点升级设计](../specs/2026-07-13-v2-beta-production-image-switch-design.md)（已获老板确认采用修正版“镜像单点升级 + 两个历史文件精确白名单”）。
 >
-> 前置条件：Gate 9 已完成（2026-07-13）。RC 镜像 `xjiankong-trendradar:v2-beta-rc-20260712` 已本地构建并通过一次性容器验证；未上传、未部署。
+> 前置条件：Gate 9.1 已完成（2026-07-13）。RC 镜像 `xjiankong-trendradar:v2-beta-rc-20260713` 已本地构建并通过代码审查、真实 Chrome 交互和一次性容器验证；未上传、未部署。
 >
 > 本计划是设计规格的**逐命令实施细化**，覆盖 Gate 10A—10D 四个子闸门。任何生产操作均须老板在当前对话中逐项确认后才能执行。
 
@@ -31,13 +31,14 @@
 | 项目 | 固定值 |
 |------|-----|
 | 生产镜像（当前） | `xjiankong-trendradar:v2-alpha-20260709` |
-| v2-beta RC 镜像标签 | `xjiankong-trendradar:v2-beta-rc-20260712` |
-| RC 镜像 SHA | `sha256:91983de58c07a12c9fc0ada28474e1d48de26b5a126c3d8fd7f6971f7a748ee4` |
+| v2-beta RC 镜像标签 | `xjiankong-trendradar:v2-beta-rc-20260713` |
+| RC 镜像 SHA | `sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f` |
 | RC 镜像平台 | `linux/amd64` |
-| RC 镜像大小 | 138,047,386 bytes |
+| RC 镜像大小 | 138,032,730 bytes |
 | RC 功能基线 | `codex/v2-beta-rc` / `8f7e385ac1453521a7ffffa9c5de43d725af76b9` |
 | RC 构建兼容性提交 | `5c02c6ce` |
-| RC 代码差异 | 新增 `v2_beta_deep_space_ui.py`、`v2_beta_history_manifest.py`；修改 `formatter.py`、`context.py`、`generator.py`、`html.py`；无 config/docker 差异 |
+| Gate 9.1 最终 HEAD | `61ba393225de1b6d9d165a1dcddc189073f3e2d6` |
+| RC 代码差异 | 新增 `v2_beta_deep_space_ui.py`、`v2_beta_history_manifest.py`；修改 `formatter.py`、`context.py`、`generator.py`、`html.py`；Gate 9.1 仅追加 `html.py` 与其 fixture；无 config/docker 差异 |
 | NAS 项目路径 | `/volume1/docker/trendradar-nas/` |
 | NAS SSH | `ssh z5451530@192.168.1.193`（局域网直连优先） |
 | 公网地址 | `https://trend.shankluo.cc` |
@@ -102,7 +103,7 @@ ssh -t z5451530@192.168.1.193 "for c in xjiankong-trendradar xjiankong-report-we
 ssh -t z5451530@192.168.1.193 "sudo docker images xjiankong-trendradar --format '{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}'"
 ```
 
-预期：存在 `v2-alpha-20260709`；不存在 `v2-beta-rc-20260712`。
+预期：存在 `v2-alpha-20260709`；不存在 `v2-beta-rc-20260713`。
 
 ```bash
 ssh -t z5451530@192.168.1.193 "sudo docker image inspect xjiankong-trendradar:v2-alpha-20260709 --format '{{.Id}}|{{.Architecture}}|{{.Os}}|{{.Size}}'"
@@ -161,11 +162,11 @@ ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'for d in news rss html; do p=/vol
 ### 10A-8: 本地 RC 镜像确认
 
 ```bash
-docker image inspect xjiankong-trendradar:v2-beta-rc-20260712 \
+docker image inspect xjiankong-trendradar:v2-beta-rc-20260713 \
   --format '{{.Id}}|{{.Architecture}}|{{.Os}}|{{.Size}}'
 ```
 
-预期：ID 为 `sha256:91983de58c07...`，`linux/amd64`，138,047,386 bytes。
+预期：ID 为 `sha256:3c02dceafa86...`，`linux/amd64`，138,032,730 bytes。
 
 ### 10A 通过条件
 
@@ -174,7 +175,7 @@ docker image inspect xjiankong-trendradar:v2-beta-rc-20260712 \
 - v2-alpha 镜像可被精确引用（回滚基础）。
 - `.env` 中 `TRENDRADAR_IMAGE` 当前值已记录。
 - nginx.conf 当前不含 history 路由（待更新）。
-- 本地 RC 镜像身份与 Gate 9 一致。
+- 本地 RC 镜像身份与 Gate 9.1 一致。
 
 **回报后等待老板确认，才进入 Gate 10B。**
 
@@ -226,10 +227,10 @@ ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"$BACKUP_DIR\"; test -s \"\$B/
 ### 10B-2: 本地导出镜像
 
 ```bash
-docker save xjiankong-trendradar:v2-beta-rc-20260712 -o /tmp/v2-beta-rc-20260712.tar
-shasum -a 256 /tmp/v2-beta-rc-20260712.tar > /tmp/v2-beta-rc-20260712.tar.sha256
-cat /tmp/v2-beta-rc-20260712.tar.sha256
-ls -la /tmp/v2-beta-rc-20260712.tar
+docker save xjiankong-trendradar:v2-beta-rc-20260713 -o /tmp/v2-beta-rc-20260713.tar
+shasum -a 256 /tmp/v2-beta-rc-20260713.tar > /tmp/v2-beta-rc-20260713.tar.sha256
+cat /tmp/v2-beta-rc-20260713.tar.sha256
+ls -la /tmp/v2-beta-rc-20260713.tar
 ```
 
 记录归档 SHA-256 和大小。
@@ -237,11 +238,11 @@ ls -la /tmp/v2-beta-rc-20260712.tar
 ### 10B-3: 传输到 NAS
 
 ```bash
-scp -O /tmp/v2-beta-rc-20260712.tar z5451530@192.168.1.193:/tmp/
-scp -O /tmp/v2-beta-rc-20260712.tar.sha256 z5451530@192.168.1.193:/tmp/
+scp -O /tmp/v2-beta-rc-20260713.tar z5451530@192.168.1.193:/tmp/
+scp -O /tmp/v2-beta-rc-20260713.tar.sha256 z5451530@192.168.1.193:/tmp/
 
 # NAS 端校验
-ssh -t z5451530@192.168.1.193 "cd /tmp && sha256sum -c v2-beta-rc-20260712.tar.sha256 && ls -la v2-beta-rc-20260712.tar"
+ssh -t z5451530@192.168.1.193 "cd /tmp && sha256sum -c v2-beta-rc-20260713.tar.sha256 && ls -la v2-beta-rc-20260713.tar"
 ```
 
 预期：NAS 端 SHA-256 与本地一致。
@@ -249,25 +250,25 @@ ssh -t z5451530@192.168.1.193 "cd /tmp && sha256sum -c v2-beta-rc-20260712.tar.s
 ### 10B-4: NAS 加载镜像
 
 ```bash
-ssh -t z5451530@192.168.1.193 "sudo docker load -i /tmp/v2-beta-rc-20260712.tar"
+ssh -t z5451530@192.168.1.193 "sudo docker load -i /tmp/v2-beta-rc-20260713.tar"
 
 # 验证镜像身份
-ssh -t z5451530@192.168.1.193 "sudo docker image inspect xjiankong-trendradar:v2-beta-rc-20260712 --format '{{.Id}}|{{.Architecture}}|{{.Size}}'"
+ssh -t z5451530@192.168.1.193 "sudo docker image inspect xjiankong-trendradar:v2-beta-rc-20260713 --format '{{.Id}}|{{.Architecture}}|{{.Size}}'"
 ```
 
-预期：ID 为 `sha256:91983de58c07a12c9fc0ada28474e1d48de26b5a126c3d8fd7f6971f7a748ee4`，`linux/amd64`，138,047,386 bytes。
+预期：ID 为 `sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f`，`linux/amd64`，138,032,730 bytes。
 
 ### 10B-5: NAS 免费容器断言
 
 ```bash
-ssh -t z5451530@192.168.1.193 "sudo docker run --rm --platform linux/amd64 --entrypoint python -e LITELLM_LOCAL_MODEL_COST_MAP=True xjiankong-trendradar:v2-beta-rc-20260712 -c \"from trendradar.ai.analyzer import SourceRef; from trendradar.ai.formatter import render_ai_analysis_html_web; from trendradar.report.generator import build_history_manifest, write_history_archive_page; from trendradar.report.html import render_html_content; print('RC_IMPORT_OK')\""
+ssh -t z5451530@192.168.1.193 "sudo docker run --rm --platform linux/amd64 --entrypoint python -e LITELLM_LOCAL_MODEL_COST_MAP=True xjiankong-trendradar:v2-beta-rc-20260713 -c \"from trendradar.ai.analyzer import SourceRef; from trendradar.ai.formatter import render_ai_analysis_html_web; from trendradar.report.generator import build_history_manifest, write_history_archive_page; from trendradar.report.html import render_html_content; print('RC_IMPORT_OK')\""
 ```
 
 预期：输出 `RC_IMPORT_OK`，无 traceback。
 
 ```bash
 # 确认无残留容器
-ssh -t z5451530@192.168.1.193 "sudo docker ps -a --filter ancestor=xjiankong-trendradar:v2-beta-rc-20260712 --format '{{.ID}} {{.Status}}'"
+ssh -t z5451530@192.168.1.193 "sudo docker ps -a --filter ancestor=xjiankong-trendradar:v2-beta-rc-20260713 --format '{{.ID}} {{.Status}}'"
 ```
 
 预期：无输出。
@@ -311,8 +312,8 @@ gate10_backup_preflight
 
 ```bash
 gate10_backup_preflight
-ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"$BACKUP_DIR\"; P=/volume1/docker/trendradar-nas/.env; test \"\$(grep -c \"^TRENDRADAR_IMAGE=\" \"\$B/.env\")\" -eq 1; test \"\$(grep -c \"^TRENDRADAR_IMAGE=\" \"\$P\")\" -eq 1; OLD=\"\$(grep \"^TRENDRADAR_IMAGE=\" \"\$B/.env\")\"; CUR=\"\$(grep \"^TRENDRADAR_IMAGE=\" \"\$P\")\"; TARGET=TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712; test \"\$CUR\" = \"\$OLD\" || test \"\$CUR\" = \"\$TARGET\"'"
-ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"$BACKUP_DIR\"; P=/volume1/docker/trendradar-nas; O=\"\$(sha256sum \"\$B/nginx.conf\" | awk \"{print \\\$1}\")\"; N=\"\$(sha256sum \"\$P/nginx.conf\" | awk \"{print \\\$1}\")\"; C=missing; test ! -s \"\$B/nginx.candidate.sha256\" || C=\"\$(cat \"\$B/nginx.candidate.sha256\")\"; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$B/.env\" | sha256sum | awk \"{print \\\$1}\" > /tmp/env.original.masked; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$P/.env\" | sha256sum | awk \"{print \\\$1}\" > /tmp/env.current.masked; cmp -s /tmp/env.original.masked /tmp/env.current.masked; E=\"\$(grep \"^TRENDRADAR_IMAGE=\" \"\$P/.env\")\"; I=\"\$(docker inspect xjiankong-trendradar --format \"{{.Image}}\")\"; OLD=\"\$(awk -F\"|\" \"NR==1{print \\\$2}\" \"\$B/current-trendradar-image.txt\")\"; RC=sha256:91983de58c07a12c9fc0ada28474e1d48de26b5a126c3d8fd7f6971f7a748ee4; if test \"\$N\" = \"\$O\" && test \"\$I\" = \"\$OLD\" && test \"\$E\" != TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712; then S=original; elif test \"\$N\" = \"\$C\" && test \"\$I\" = \"\$OLD\" && test \"\$E\" != TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712; then S=nginx-only; elif test \"\$N\" = \"\$C\" && test \"\$I\" = \"\$OLD\" && test \"\$E\" = TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712; then S=files-changed-not-recreated; elif test \"\$N\" = \"\$C\" && test \"\$I\" = \"\$RC\" && test \"\$E\" = TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712; then S=recreated; else exit 1; fi; printf \"gate10c_state=%s\\n\" \"\$S\"; test \"\$S\" = original'"
+ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"$BACKUP_DIR\"; P=/volume1/docker/trendradar-nas/.env; test \"\$(grep -c \"^TRENDRADAR_IMAGE=\" \"\$B/.env\")\" -eq 1; test \"\$(grep -c \"^TRENDRADAR_IMAGE=\" \"\$P\")\" -eq 1; OLD=\"\$(grep \"^TRENDRADAR_IMAGE=\" \"\$B/.env\")\"; CUR=\"\$(grep \"^TRENDRADAR_IMAGE=\" \"\$P\")\"; TARGET=TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713; test \"\$CUR\" = \"\$OLD\" || test \"\$CUR\" = \"\$TARGET\"'"
+ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"$BACKUP_DIR\"; P=/volume1/docker/trendradar-nas; O=\"\$(sha256sum \"\$B/nginx.conf\" | awk \"{print \\\$1}\")\"; N=\"\$(sha256sum \"\$P/nginx.conf\" | awk \"{print \\\$1}\")\"; C=missing; test ! -s \"\$B/nginx.candidate.sha256\" || C=\"\$(cat \"\$B/nginx.candidate.sha256\")\"; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$B/.env\" | sha256sum | awk \"{print \\\$1}\" > /tmp/env.original.masked; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$P/.env\" | sha256sum | awk \"{print \\\$1}\" > /tmp/env.current.masked; cmp -s /tmp/env.original.masked /tmp/env.current.masked; E=\"\$(grep \"^TRENDRADAR_IMAGE=\" \"\$P/.env\")\"; I=\"\$(docker inspect xjiankong-trendradar --format \"{{.Image}}\")\"; OLD=\"\$(awk -F\"|\" \"NR==1{print \\\$2}\" \"\$B/current-trendradar-image.txt\")\"; RC=sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f; if test \"\$N\" = \"\$O\" && test \"\$I\" = \"\$OLD\" && test \"\$E\" != TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713; then S=original; elif test \"\$N\" = \"\$C\" && test \"\$I\" = \"\$OLD\" && test \"\$E\" != TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713; then S=nginx-only; elif test \"\$N\" = \"\$C\" && test \"\$I\" = \"\$OLD\" && test \"\$E\" = TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713; then S=files-changed-not-recreated; elif test \"\$N\" = \"\$C\" && test \"\$I\" = \"\$RC\" && test \"\$E\" = TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713; then S=recreated; else exit 1; fi; printf \"gate10c_state=%s\\n\" \"\$S\"; test \"\$S\" = original'"
 ```
 
 最后的 `test` 使②—④明确停止。恢复命令必须走第七节完整回滚（含双服务强制重建和原始 SHA/镜像验证），然后重新执行本状态机。
@@ -357,12 +358,12 @@ ssh -t z5451530@192.168.1.193 "sudo grep '^TRENDRADAR_IMAGE=' /volume1/docker/tr
 
 # 用 root shell 原子生成并安装；除镜像行外必须与备份逐字节一致
 gate10_backup_preflight
-ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'P=/volume1/docker/trendradar-nas/.env; B=\"$BACKUP_DIR/.env\"; test \"\$(grep -c \"^TRENDRADAR_IMAGE=\" \"\$P\")\" -eq 1; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712|\" \"\$P\" > /tmp/xjiankong.env.new; chmod 600 /tmp/xjiankong.env.new; install -m 600 /tmp/xjiankong.env.new \"\$P\"; test \"\$(grep -c \"^TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260712\$\" \"\$P\")\" -eq 1; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$P\" | sha256sum > /tmp/env.after.masked; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$B\" | sha256sum > /tmp/env.before.masked; cmp -s /tmp/env.before.masked /tmp/env.after.masked'" || ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"\$(cat /tmp/xjiankong-gate10-backup-dir)\"; printf \"%s\\n\" \"\$B\" | grep -Eq \"^/volume1/docker/trendradar-nas/backups/v2-beta-[0-9]{8}-[0-9]{6}\$\"; test -d \"\$B\"; test -s \"\$B/.env\"; test -s \"\$B/nginx.conf\"; cd /; sha256sum -c \"\$B/manifest.sha256\" >/dev/null; cp \"\$B/.env\" /volume1/docker/trendradar-nas/.env; chmod 600 /volume1/docker/trendradar-nas/.env; cp \"\$B/nginx.conf\" /volume1/docker/trendradar-nas/nginx.conf; cmp -s \"\$B/.env\" /volume1/docker/trendradar-nas/.env; cmp -s \"\$B/nginx.conf\" /volume1/docker/trendradar-nas/nginx.conf; test \"\$(sha256sum \"\$B/nginx.conf\" | awk \"{print \\\$1}\")\" = \"\$(sha256sum /volume1/docker/trendradar-nas/nginx.conf | awk \"{print \\\$1}\")\"'"
+ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'P=/volume1/docker/trendradar-nas/.env; B=\"$BACKUP_DIR/.env\"; test \"\$(grep -c \"^TRENDRADAR_IMAGE=\" \"\$P\")\" -eq 1; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713|\" \"\$P\" > /tmp/xjiankong.env.new; chmod 600 /tmp/xjiankong.env.new; install -m 600 /tmp/xjiankong.env.new \"\$P\"; test \"\$(grep -c \"^TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713\$\" \"\$P\")\" -eq 1; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$P\" | sha256sum > /tmp/env.after.masked; sed \"s|^TRENDRADAR_IMAGE=.*|TRENDRADAR_IMAGE=MASKED|\" \"\$B\" | sha256sum > /tmp/env.before.masked; cmp -s /tmp/env.before.masked /tmp/env.after.masked'" || ssh -t z5451530@192.168.1.193 "sudo sh -eu -c 'B=\"\$(cat /tmp/xjiankong-gate10-backup-dir)\"; printf \"%s\\n\" \"\$B\" | grep -Eq \"^/volume1/docker/trendradar-nas/backups/v2-beta-[0-9]{8}-[0-9]{6}\$\"; test -d \"\$B\"; test -s \"\$B/.env\"; test -s \"\$B/nginx.conf\"; cd /; sha256sum -c \"\$B/manifest.sha256\" >/dev/null; cp \"\$B/.env\" /volume1/docker/trendradar-nas/.env; chmod 600 /volume1/docker/trendradar-nas/.env; cp \"\$B/nginx.conf\" /volume1/docker/trendradar-nas/nginx.conf; cmp -s \"\$B/.env\" /volume1/docker/trendradar-nas/.env; cmp -s \"\$B/nginx.conf\" /volume1/docker/trendradar-nas/nginx.conf; test \"\$(sha256sum \"\$B/nginx.conf\" | awk \"{print \\\$1}\")\" = \"\$(sha256sum /volume1/docker/trendradar-nas/nginx.conf | awk \"{print \\\$1}\")\"'"
 
 ssh -t z5451530@192.168.1.193 "sudo grep '^TRENDRADAR_IMAGE=' /volume1/docker/trendradar-nas/.env"
 ```
 
-预期：更新前为 v2-alpha 标签，更新后为 `xjiankong-trendradar:v2-beta-rc-20260712`。
+预期：更新前为 v2-alpha 标签，更新后为 `xjiankong-trendradar:v2-beta-rc-20260713`。
 
 ### 10C-4: 只重建 trendradar 与 report-web
 
@@ -386,7 +387,7 @@ ssh -t z5451530@192.168.1.193 "sudo docker ps --filter name=xjiankong --format '
 ssh -t z5451530@192.168.1.193 "for c in xjiankong-trendradar xjiankong-report-web xjiankong-cloudflared xjiankong-rss-proxy; do sudo docker inspect \"\$c\" --format '{{.Name}}|{{.Id}}|{{.Config.Image}}|{{.Image}}|{{.State.StartedAt}}|{{.RestartCount}}|{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}|{{json .Mounts}}|{{json .NetworkSettings.Networks}}'; done"
 
 # 固定 RC 镜像 ID 必须精确相等
-ssh -t z5451530@192.168.1.193 "test \"\$(sudo docker inspect xjiankong-trendradar --format '{{.Image}}')\" = 'sha256:91983de58c07a12c9fc0ada28474e1d48de26b5a126c3d8fd7f6971f7a748ee4'"
+ssh -t z5451530@192.168.1.193 "test \"\$(sudo docker inspect xjiankong-trendradar --format '{{.Image}}')\" = 'sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f'"
 
 # trendradar 日志（无 import 错误）
 ssh -t z5451530@192.168.1.193 "sudo docker logs xjiankong-trendradar --tail 30"
@@ -407,7 +408,7 @@ test "$(curl -sS -o /dev/null -w '%{http_code}' https://trend.shankluo.cc/output
 ```
 
 预期：
-- 四容器均 Up；trendradar 使用 `v2-beta-rc-20260712` 镜像。
+- 四容器均 Up；trendradar 使用 `v2-beta-rc-20260713` 镜像。
 - 日志无 ModuleNotFoundError 或配置错误。
 - 公网 HTTP 200（旧报告仍在）。
 - 敏感路径全 404。

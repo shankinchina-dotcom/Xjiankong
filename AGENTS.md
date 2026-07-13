@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **NAS 生产运行阶段**：TrendRadar 已在群晖 NAS 通过 Docker Compose 四容器架构运行（trendradar + report-web + cloudflared + rss-proxy），Cloudflare Tunnel 已配置公网访问 `https://trend.shankluo.cc`；AI 分析（deepseek flash）与 AI 翻译已启用；Nitter RSS 代理修复已完成端到端验证（2026-07-07）：热榜 11/11，RSS 41/44（30/33 Nitter）；v2-alpha「AI 行业每日研判报告」已于 2026-07-09 生产上线，当前 TrendRadar 镜像为 `xjiankong-trendradar:v2-alpha-20260709`，代码基线为 TrendRadar `v2-alpha` HEAD `33d80973`，上线验证：热榜 11/11、RSS 38/44、翻译 26/26、AI 分析 deepseek flash、公网 HTTP 200、`/.env` 与 `/news/test.db` 均 404；v2-beta 已完成本地代码、免费回归和 RC 冻结，当前仅阻塞在本机 Docker Engine 的镜像 metadata/pull 通道，尚未构建、上传或部署；X Hosted MCP 已归档，不属于活动架构。
+本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **NAS 生产运行阶段**：TrendRadar 已在群晖 NAS 通过 Docker Compose 四容器架构运行（trendradar + report-web + cloudflared + rss-proxy），Cloudflare Tunnel 已配置公网访问 `https://trend.shankluo.cc`；AI 分析（deepseek flash）与 AI 翻译已启用；Nitter RSS 代理修复已完成端到端验证（2026-07-07）：热榜 11/11，RSS 41/44（30/33 Nitter）；v2-alpha「AI 行业每日研判报告」已于 2026-07-09 生产上线，当前 TrendRadar 镜像为 `xjiankong-trendradar:v2-alpha-20260709`，代码基线为 TrendRadar `v2-alpha` HEAD `33d80973`，上线验证：热榜 11/11、RSS 38/44、翻译 26/26、AI 分析 deepseek flash、公网 HTTP 200、`/.env` 与 `/news/test.db` 均 404；v2-beta 已完成本地代码、免费回归、Gate 9.1 无障碍加固和新 RC 镜像验证，当前本地 RC 为 `xjiankong-trendradar:v2-beta-rc-20260713`，尚未上传或部署；Gate 10A 首次只读预检因 NAS SSH 不可达停止，网络恢复后从 10A-1 重试；X Hosted MCP 已归档，不属于活动架构。
 
 ## 项目目标
 

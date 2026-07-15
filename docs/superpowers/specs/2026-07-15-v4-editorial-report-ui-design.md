@@ -1,6 +1,6 @@
 # V4 编辑型情报报告 UI 设计
 
-> 状态：**Task 8 已执行并经 Codex 最终复审通过。** 生产 `v2-beta-v4-rc-20260715`（NAS Config ID `sha256:365c92d5…`）；一次付费全链路 249s／exit 0；新快照 `html/2026-07-15/23-22.html` 含 V4 suite／导航／J1–J3；公网与安全路径验收通过。
+> 状态：**V4 已上线（Task 8 通过）。V4.1 增量（证据折叠／大厂色／RSS 预览）本地已实现待 RC。** 生产仍为 `v2-beta-v4-rc-20260715`（NAS Config ID `sha256:365c92d5…`）。
 >
 > 权威视觉原型：[`../prototypes/2026-07-15-xjiankong-report-v4-editorial.html`](../prototypes/2026-07-15-xjiankong-report-v4-editorial.html)。原型仅用于视觉和结构裁定，不得直接复制其中的模拟新闻、固定统计或来源编号进入生产。
 
@@ -105,8 +105,8 @@ baseline HEAD: 61ba393225de1b6d9d165a1dcddc189073f3e2d6
 
 ## 七、当前边界与交接说明
 
-- 实施 worktree 为 `TrendRadar-v2-beta-history`（`codex/v2-beta-history`）；V4 网页 renderer 本地提交 `18c1fbad`。本地 RC Mac ID `sha256:18d49e97…`；NAS 运行侧 Config ID `sha256:365c92d50928525df93dfb9943051d914c647ac2337f58f29df245536753d1dc`；tar SHA-256 `88b1273f…`；14 层 DiffID chain `a6e19f41…`。
-- Task 7（2026-07-15）：`.env` 仅改 `TRENDRADAR_IMAGE` → `v2-beta-v4-rc-20260715`；只重建 `trendradar`（Id `1466e949…`）。备份 `v4-rc-20260715-224353`。回滚基线：`v2-beta-rc-20260713` / `sha256:c122cdb56076…`。
-- Task 8（2026-07-15）：一次付费运行 start–end `1784128715`–`1784128964`（249s，rc=0）；热榜 11/11、RSS 42/44（Nitter 31/33）、翻译 26/26、AI deepseek-chat 完成；唯一新快照 `/html/2026-07-15/23-22.html`；证据 `backups/v4-task8-20260715-231822`。**Task 8 已执行并经 Codex 最终复审通过**；文档可提交。
+- 实施 worktree：`TrendRadar-v2-beta-history`。已上线 `18c1fbad`；V4.1 代码 `01264222`（未部署）。生产 RC `v2-beta-v4-rc-20260715` / NAS `sha256:365c92d5…`。
+- Task 7–8：已完成；回滚 `v2-beta-rc-20260713` / `sha256:c122cdb56076…`。
+- V4.1（2026-07-16）：证据折叠 + 大厂色 + RSS 5 条预览；fixture 24/24；**待 RC／部署**。见 [`../plans/2026-07-16-v4-1-ui-polish-handoff.md`](../plans/2026-07-16-v4-1-ui-polish-handoff.md)。
 - `/Users/shankluo/AI/Claude/TrendRadar` 主 worktree 位于 `v2-alpha` 且有多项用户修改，禁止在该 worktree 实施 V4。
 - 实施入口见 [`../plans/2026-07-15-v4-editorial-report-production.md`](../plans/2026-07-15-v4-editorial-report-production.md)。

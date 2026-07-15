@@ -1,6 +1,6 @@
 # Xjiankong 项目路线图
 
-> 更新日期：2026-07-15。
+> 更新日期：2026-07-16。
 >
 > 本文件是项目的**主进度源**。进入项目后，先阅读根目录 `AGENTS.md`、适用的 `CLAUDE.md` 与本文件；再按链接进入对应的规格或实施计划。详细计划不等于已完成：只有实际验证过的结果才可改变本文件的状态。
 
@@ -9,7 +9,7 @@
 - 活动架构：A1 / TrendRadar；X Hosted MCP 已归档，不属于活动架构。
 - 生产基线：`xjiankong-trendradar:v2-beta-v4-rc-20260715`（2026-07-15 Task 7 免费切换 + **Task 8 一次付费全链路已执行并经 Codex 最终复审通过**）；直接回滚基线为 `xjiankong-trendradar:v2-beta-rc-20260713` / NAS `sha256:c122cdb56076ed3e0342a2c348537d0f9bd4d48ea2955271489049e7147688b9`；更早的二级回滚历史保留 `v2-alpha-20260709` / `sha256:ea2d7183483d9026618a3d85313ac293087200e5a576b4e506366fc3bc83bb9d`（非当前直接回滚基线）。
 - v2-beta RC：功能基线 `8f7e385ac1453521a7ffffa9c5de43d725af76b9`，Docker 构建兼容性提交 `5c02c6ce`，Gate 9.1 最终 HEAD `61ba3932`；已部署至生产（Gate 10，2026-07-14），见下方 Gate 10 完成记录。
-- V4 编辑型报告：视觉与信息层级已由老板确认，权威原型为 `docs/superpowers/prototypes/2026-07-15-xjiankong-report-v4-editorial.html`。状态：**Task 8 已执行并经 Codex 最终复审通过**。生产 `v2-beta-v4-rc-20260715` / `sha256:365c92d5…`；一次付费运行 249s、exit 0；热榜 11/11、RSS 42/44（Nitter 31/33）、翻译 26/26、AI `deepseek-chat` 完成；唯一新快照 `/html/2026-07-15/23-22.html`；V4 DOM／公网 200／敏感路径 404 均过；证据目录 `backups/v4-task8-20260715-231822`。设计与交接入口见 [V4 设计规格](superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md) 和 [V4 生产实施计划](superpowers/plans/2026-07-15-v4-editorial-report-production.md)。
+- V4 编辑型报告：Task 1–8 已完成并上线（权威原型 `docs/superpowers/prototypes/2026-07-15-xjiankong-report-v4-editorial.html`；生产 `v2-beta-v4-rc-20260715`）。**V4.1 增量（本地已实现、待提交／RC）**：证据区默认折叠、大厂色点状强调、RSS 组预览折叠（缓解 ai-core／ai-tools 不对等拉长）。入口：[V4 设计](superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md)、[V4 计划](superpowers/plans/2026-07-15-v4-editorial-report-production.md)、[交接摘要](superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md)。
 - 当前采集来源：中文热榜、X 账号 RSS、GitHub/HuggingFace/Release RSS。小红书和公众号尚未接入。
 
 ## 二、执行顺序与状态
@@ -19,7 +19,7 @@
 | 1 | Gate 9／9.1：本地 RC 镜像、无障碍加固与临时容器验证 | 已完成 | 2026-07-13：代码审查、真实 Chrome 交互、`RC_IMPORT_OK`、`RC_CONTAINER_OK` 均通过，且无常驻验证容器 | `xjiankong-trendradar:v2-beta-rc-20260713`；详见 Gate 9.1 实施计划 | Terra 高／Sol 高 |
 | 2 | Gate 10：v2-beta 生产同步与回滚方案 | 已完成（10A–10D 全部通过） | 10A/10B 已完成；老板已接受 RootFS 等价作为 10B 通过；10C 已执行（2026-07-14）；10D 一次付费全链路验收已通过（2026-07-14） | 10C/10D 见下方完成记录；[Gate 10D 交接文档](gate10d-handoff.md)；进入阶段 3 稳定性观察 | Sol 高 |
 | 3 | v2-beta 上线后稳定性观察 | 进行中 | Gate 10 已获批准并完成生产部署（10A–10D 全通过） | 连续记录热榜、RSS、翻译、AI 分析、历史快照和公网安全路径；异常必须标明来源与影响；已起每 4h 定时只读观察，日志 `docs/stability-observation.md` | Terra 高 |
-| 4 | V4 编辑型报告生产化 | Task 8 已执行并经 Codex 最终复审通过 | 一次付费全链路通过（249s，exit 0；快照 `23-22.html`；V4 DOM／公网／安全路径 OK）；禁止二次运行与自动清理 | 下一步：V4 生产化完成；进入稳定性观察 | Sol 中／高 |
+| 4 | V4 编辑型报告生产化 | 已完成；V4.1 增量进行中 | Task 8 已通过；V4.1 本地 fixture 24/24 | 下一步：提交 V4.1 → 本地 RC → 单独批准后 NAS 切换 | Terra 高／Sol 高 |
 | 5 | K/AI 过滤实验 | 未开始 | 冻结连续 7 天的同批新闻与 RSS SQLite 快照；建立不少于 300 条人工标注集 | 同快照下的 Variant K/AI 精确率、重要事件漏报、人工复核量与成本对比 | Sol 中 |
 | 6 | 中文内容平台与 AIGC 赛道选型调研 | 未开始 | 阶段 3 已开始且主链无阻塞性问题；不改生产 | GitHub 候选项目清单、淘汰依据、公开来源可用性、四赛道监测设计 | Sol 中 |
 | 7 | 单来源试点与质量验证 | 未开始 | 阶段 6 设计经老板确认；获得对应外部配置批准 | 单一来源、最小关键词/分类、命中质量和稳定性报告；不自动扩大范围 | Terra 高；国产模型须先校准 |

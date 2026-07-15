@@ -259,7 +259,15 @@ docker build --platform linux/amd64 --pull=false \
 
 - [x] **Step 4: 判定**
 
-**通过，未回滚。** 状态：**Task 8 已执行并经 Codex 最终复审通过**；文档可提交。未 push、未清理证据、未二次运行。
+**通过，未回滚。** 状态：**Task 8 已执行并经 Codex 最终复审通过**。
+
+### Task 9: V4.1 UI 增量（证据折叠／大厂色／RSS 预览）
+
+- [x] **本地实现与 fixture 24/24**（2026-07-16，未上线）
+  - 证据区默认折叠；大厂色点状 token；RSS 组默认 5 条 + 展开剩余。
+  - 交接：[`2026-07-16-v4-1-ui-polish-handoff.md`](2026-07-16-v4-1-ui-polish-handoff.md)
+- [ ] **本地提交 + RC 构建 + 一次性容器**
+- [ ] **老板确认后 NAS 单点切换**（只重建 trendradar）
 
 ## 下个 Agent 的第一条动作
 
@@ -268,6 +276,7 @@ cd /Users/shankluo/AI/Claude/TrendRadar-v2-beta-history
 git status --short
 git branch --show-current
 git rev-parse HEAD
+# 预期：V4.1 三文件未提交或刚提交；生产仍为 v2-beta-v4-rc-20260715
 ```
 
-只读回报实际状态，并从 Task 1 的失败测试开始。不要先复制原型 CSS，不要访问 NAS，不要构建镜像。
+从 Task 9 提交／RC 闸门继续；不要在脏 `TrendRadar` 主 worktree 实施；不要自动付费重跑。

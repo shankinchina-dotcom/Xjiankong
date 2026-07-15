@@ -10,7 +10,8 @@
 | NAS Config ID | `sha256:365c92d50928525df93dfb9943051d914c647ac2337f58f29df245536753d1dc` |
 | 直接回滚 | `v2-beta-rc-20260713` / NAS `sha256:c122cdb56076…` |
 | 代码基线（已上线） | TrendRadar `18c1fbad` |
-| V4.1 代码 | TrendRadar `01264222`（`codex/v2-beta-history`，未部署） |
+| V4.1 代码 | TrendRadar `01264222`（`codex/v2-beta-history`） |
+| V4.1 本地 RC | `xjiankong-trendradar:v2-beta-v4-rc-20260716` / Mac ID `sha256:442efe385605…` / amd64 / Size 138376197 / DiffID chain `1a54fd0b36a1…`；`RC_IMPORT_OK`+`RC_CONTAINER_OK` 通过；**未部署** |
 | Task 8 证据 | `backups/v4-task8-20260715-231822`（勿删） |
 
 ## V4 主线结论
@@ -40,8 +41,8 @@
 
 ## 下一步闸门
 
-1. ~~提交 V4.1 代码~~（已完成 `01264222`）
-2. 构建 `xjiankong-trendradar:v2-beta-v4-rc-20260716`
-3. 一次性容器免费断言
-4. 老板确认后：NAS 传输 → 只改 `TRENDRADAR_IMAGE` → 只重建 `trendradar`
+1. ~~提交 V4.1 代码~~（`01264222`）
+2. ~~构建本地 RC~~（`v2-beta-v4-rc-20260716`，容器断言通过）
+3. ~~一次性容器免费断言~~
+4. **下一步（须老板批准）**：NAS 传输 → 只改 `TRENDRADAR_IMAGE` → 只重建 `trendradar`
 5. 可选一次付费验收；并行稳定性观察

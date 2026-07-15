@@ -263,11 +263,11 @@ docker build --platform linux/amd64 --pull=false \
 
 ### Task 9: V4.1 UI 增量（证据折叠／大厂色／RSS 预览）
 
-- [x] **本地实现与 fixture 24/24**（2026-07-16，未上线）
+- [x] **本地实现与 fixture 24/24**（2026-07-16）
   - 证据区默认折叠；大厂色点状 token；RSS 组默认 5 条 + 展开剩余。
   - 交接：[`2026-07-16-v4-1-ui-polish-handoff.md`](2026-07-16-v4-1-ui-polish-handoff.md)
-- [ ] **本地提交 + RC 构建 + 一次性容器**
-- [ ] **老板确认后 NAS 单点切换**（只重建 trendradar）
+- [x] **本地提交 + RC 构建 + 一次性容器**（`01264222`；`v2-beta-v4-rc-20260716` / `sha256:442efe38…`；`RC_IMPORT_OK`/`RC_CONTAINER_OK`）
+- [ ] **老板确认后 NAS 单点切换**（只重建 trendradar；生产仍为 `v2-beta-v4-rc-20260715`）
 
 ## 下个 Agent 的第一条动作
 

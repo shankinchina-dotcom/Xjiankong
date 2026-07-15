@@ -9,7 +9,7 @@
 - 活动架构：A1 / TrendRadar；X Hosted MCP 已归档，不属于活动架构。
 - 生产基线：`xjiankong-trendradar:v2-beta-v4-rc-20260715`（2026-07-15 Task 7 免费切换 + **Task 8 一次付费全链路已执行并经 Codex 最终复审通过**）；直接回滚基线为 `xjiankong-trendradar:v2-beta-rc-20260713` / NAS `sha256:c122cdb56076ed3e0342a2c348537d0f9bd4d48ea2955271489049e7147688b9`；更早的二级回滚历史保留 `v2-alpha-20260709` / `sha256:ea2d7183483d9026618a3d85313ac293087200e5a576b4e506366fc3bc83bb9d`（非当前直接回滚基线）。
 - v2-beta RC：功能基线 `8f7e385ac1453521a7ffffa9c5de43d725af76b9`，Docker 构建兼容性提交 `5c02c6ce`，Gate 9.1 最终 HEAD `61ba3932`；已部署至生产（Gate 10，2026-07-14），见下方 Gate 10 完成记录。
-- V4 编辑型报告：Task 1–8 已完成并上线（权威原型 `docs/superpowers/prototypes/2026-07-15-xjiankong-report-v4-editorial.html`；生产 `v2-beta-v4-rc-20260715`）。**V4.1 增量（本地已实现、待提交／RC）**：证据区默认折叠、大厂色点状强调、RSS 组预览折叠（缓解 ai-core／ai-tools 不对等拉长）。入口：[V4 设计](superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md)、[V4 计划](superpowers/plans/2026-07-15-v4-editorial-report-production.md)、[交接摘要](superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md)。
+- V4 编辑型报告：Task 1–8 已上线（生产 `v2-beta-v4-rc-20260715`）。**V4.1 本地 RC 已验证、待 NAS**：证据折叠、大厂色点状、RSS 组 5 条预览；代码 `01264222`；镜像 `v2-beta-v4-rc-20260716`（Mac `sha256:442efe38…`，amd64）。入口：[V4 设计](superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md)、[V4 计划](superpowers/plans/2026-07-15-v4-editorial-report-production.md)、[交接摘要](superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md)。
 - 当前采集来源：中文热榜、X 账号 RSS、GitHub/HuggingFace/Release RSS。小红书和公众号尚未接入。
 
 ## 二、执行顺序与状态

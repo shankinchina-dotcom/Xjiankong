@@ -1,6 +1,8 @@
 # AGENTS.md
 
-本文件定义 Xjiankong 项目的仓库级规则。项目当前处于 **NAS 生产运行阶段**：TrendRadar 已在群晖 NAS 通过 Docker Compose 四容器架构运行（trendradar + report-web + cloudflared + rss-proxy），Cloudflare Tunnel 已配置公网访问 `https://trend.shankluo.cc`；AI 分析（deepseek flash）与 AI 翻译已启用；Nitter RSS 代理修复已完成端到端验证（2026-07-07）：热榜 11/11，RSS 41/44（30/33 Nitter）；v2-alpha「AI 行业每日研判报告」已于 2026-07-09 生产上线，当前 TrendRadar 镜像为 `xjiankong-trendradar:v2-alpha-20260709`，代码基线为 TrendRadar `v2-alpha` HEAD `33d80973`，上线验证：热榜 11/11、RSS 38/44、翻译 26/26、AI 分析 deepseek flash、公网 HTTP 200、`/.env` 与 `/news/test.db` 均 404；v2-beta 已完成本地代码、免费回归、Gate 9.1 无障碍加固和新 RC 镜像验证，当前本地 RC 为 `xjiankong-trendradar:v2-beta-rc-20260713`，尚未上传或部署；Gate 10A 首次只读预检因 NAS SSH 不可达停止，网络恢复后从 10A-1 重试；X Hosted MCP 已归档，不属于活动架构。
+本文件定义 Xjiankong 项目的仓库级规则。项目处于 **NAS 生产运行阶段**（四容器：trendradar + report-web + cloudflared + rss-proxy；公网 `https://trend.shankluo.cc`）。
+
+**当前生产基线（2026-07-15 Task 8）：** `xjiankong-trendradar:v2-beta-v4-rc-20260715`（NAS Config ID `sha256:365c92d5…`）；直接回滚 `v2-beta-rc-20260713` / NAS `sha256:c122cdb56076…`。**V4.1 本地 RC 已验证、未部署：** `v2-beta-v4-rc-20260716` / Mac `sha256:442efe38…` / 代码 `01264222`。活动管道为 A1 TrendRadar；X Hosted MCP 已归档。阶段状态、闸门与验证入口以 [`docs/roadmap.md`](docs/roadmap.md) 为准；V4.1 交接见 [`docs/superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md`](docs/superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md)。
 
 ## 项目目标
 
@@ -26,7 +28,7 @@
 | `docs/roadmap.md` | 项目主进度源：阶段顺序、状态、依赖、确认闸门与验证入口 | 每次完成开发、部署、重要调研或状态变化后先更新；只记录已验证事实，并链接到详细规格或实施计划 |
 | `docs/requirements.md` | GitHub AI 追踪原始需求 | 需求变化先改此文件 |
 | `docs/github-ai-tracking-plan.md` | GitHub/HuggingFace/Release RSS 接入记录 | 必须区分“已接入”和“指标能力待复核” |
-| `docs/archive/` | 已放弃或暂停的历史方案 | 不作为执行入口；恢复前重新核验外部依赖 |
+| `docs/archive/` | 已放弃、暂停或已完成的早期方案与快照 | 不作为执行入口；恢复前重新核验外部依赖。含早期 NAS 部署 specs/plans（2026-07-03/04），其实施已被 `docs/nas-deployment.md` 实战手册吸收，不再作为活动设计源 |
 | `docs/superpowers/specs/` | 已确认但尚未实施的设计规格 | 规格经老板确认后写入；实施状态必须在文档中明确标注 |
 | `docs/superpowers/plans/` | 已批准设计对应的实施计划 | 使用复选框追踪；外部资源操作必须保留确认闸门 |
 | `deploy/nas/` | 群晖 Container Manager 部署模板和生成器 | 不保存凭据或生成包；外部部署前必须重新确认 |

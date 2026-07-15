@@ -1,6 +1,6 @@
 # V4 编辑型情报报告 UI 设计
 
-> 状态：**V4 + V4.1 均已上线（免费切换）。** 生产 `v2-beta-v4-rc-20260716`（NAS Config ID `sha256:c0262e75…`，代码 `01264222`）。V4.1 交互出现在**新生成**报告中；切换后未自动付费重跑。
+> 状态：**V4 + V4.1 已上线并通过一次付费验收。** 生产 `v2-beta-v4-rc-20260716`（NAS `sha256:c0262e75…`，代码 `01264222`）。验证页 `/html/2026-07-16/00-25.html`。
 >
 > 权威视觉原型：[`../prototypes/2026-07-15-xjiankong-report-v4-editorial.html`](../prototypes/2026-07-15-xjiankong-report-v4-editorial.html)。原型仅用于视觉和结构裁定，不得直接复制其中的模拟新闻、固定统计或来源编号进入生产。
 
@@ -107,6 +107,6 @@ baseline HEAD: 61ba393225de1b6d9d165a1dcddc189073f3e2d6
 
 - 实施 worktree：`TrendRadar-v2-beta-history`。生产代码 `01264222`；镜像 `v2-beta-v4-rc-20260716` / NAS `sha256:c0262e75…`。
 - 直接回滚：`v2-beta-v4-rc-20260715` / `365c92d5…` 或 `v2-beta-rc-20260713` / `c122cdb56076…`。
-- V4.1（2026-07-16）：证据折叠 + 大厂色 + RSS 5 条预览；**已 NAS 免费切换**；可选付费验收未执行。见 [`../plans/2026-07-16-v4-1-ui-polish-handoff.md`](../plans/2026-07-16-v4-1-ui-polish-handoff.md)。
+- V4.1（2026-07-16）：证据折叠 + 大厂色 + RSS 5 条预览；NAS 免费切换 + 付费页 `00-25.html` 公网 DOM 通过。见 [`../plans/2026-07-16-v4-1-ui-polish-handoff.md`](../plans/2026-07-16-v4-1-ui-polish-handoff.md)。
 - `/Users/shankluo/AI/Claude/TrendRadar` 主 worktree 位于 `v2-alpha` 且有多项用户修改，禁止在该 worktree 实施 V4。
 - 实施入口见 [`../plans/2026-07-15-v4-editorial-report-production.md`](../plans/2026-07-15-v4-editorial-report-production.md)。

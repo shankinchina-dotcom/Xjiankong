@@ -272,13 +272,19 @@ docker build --platform linux/amd64 --pull=false \
   - 备份：`backups/v4-1-rc-20260716-20260716-001621`
   - load 后 NAS Config ID `sha256:c0262e755c50…`；DiffID chain = Mac
   - 仅改 `TRENDRADAR_IMAGE` → `v2-beta-v4-rc-20260716`；仅 recreate `trendradar`
-  - peers 未变；日志干净；公网 200/404 符合预期；**未付费重跑**
+  - peers 未变；日志干净；公网 200/404 符合预期
+- [x] **一次付费全链路 + V4.1 UI 验收（2026-07-16 老板批准）**
+  - 证据：`backups/v4-1-task8-20260716-002145`；exit 0；stderr 0
+  - 热榜 11/11；RSS 41/3 失败（xai/elonmusk/GabrielPeterss4）；翻译 25/25；AI 完成
+  - 新页 `/html/2026-07-16/00-25.html`：`evidence-toggle`×8、`feed-toggle`×7、`ev-brand-`×7、`evidence-body[hidden]`；公网 `PUBLIC_V4_1 OK`
+  - peers 未变；敏感路径 404；history.latest → `00-25`
   - 细节：[`2026-07-16-v4-1-ui-polish-handoff.md`](2026-07-16-v4-1-ui-polish-handoff.md)
+
+**Task 9 完成。** 勿自动清理 tar/备份/旧镜像；稳定性观察继续。
 
 ## 下个 Agent 的第一条动作
 
 ```bash
-ssh z5451530@192.168.1.193 'export PATH=/usr/local/bin:$PATH; sudo -n docker inspect xjiankong-trendradar --format "{{.Config.Image}} {{.Image}}"'
-# 预期：v2-beta-v4-rc-20260716 / sha256:c0262e755c50…
-# 可选付费验收须老板另批；勿自动清理 tar/备份/旧镜像
+curl -sS -o /dev/null -w "%{http_code}\n" https://trend.shankluo.cc/html/2026-07-16/00-25.html
+# 预期 200；阶段 4 V4.1 已关闭，默认只做稳定性观察
 ```

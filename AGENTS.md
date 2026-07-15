@@ -2,7 +2,7 @@
 
 本文件定义 Xjiankong 项目的仓库级规则。项目处于 **NAS 生产运行阶段**（四容器：trendradar + report-web + cloudflared + rss-proxy；公网 `https://trend.shankluo.cc`）。
 
-**当前生产基线（2026-07-16 V4.1 免费切换）：** `xjiankong-trendradar:v2-beta-v4-rc-20260716`（NAS Config ID `sha256:c0262e75…`，代码 `01264222`）。直接回滚 `v2-beta-v4-rc-20260715` / `365c92d5…` 或 `v2-beta-rc-20260713` / `c122cdb56076…`。活动管道为 A1 TrendRadar；X Hosted MCP 已归档。阶段状态以 [`docs/roadmap.md`](docs/roadmap.md) 为准；V4.1 交接见 [`docs/superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md`](docs/superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md)。
+**当前生产基线（2026-07-16 V4.1 免费切换 + 付费验收）：** `xjiankong-trendradar:v2-beta-v4-rc-20260716`（NAS Config ID `sha256:c0262e75…`，代码 `01264222`）；验证页 `/html/2026-07-16/00-25.html`。直接回滚 `v2-beta-v4-rc-20260715` / `365c92d5…` 或 `v2-beta-rc-20260713` / `c122cdb56076…`。活动管道为 A1 TrendRadar；X Hosted MCP 已归档。阶段状态以 [`docs/roadmap.md`](docs/roadmap.md) 为准；V4.1 交接见 [`docs/superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md`](docs/superpowers/plans/2026-07-16-v4-1-ui-polish-handoff.md)。
 
 ## 项目目标
 

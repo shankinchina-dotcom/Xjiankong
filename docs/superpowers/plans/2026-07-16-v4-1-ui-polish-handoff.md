@@ -1,6 +1,6 @@
 # V4.1 UI 增量交接摘要（压缩上下文）
 
-> 日期：2026-07-16。V4.1 **已完成 NAS 免费切换**；未付费重跑。
+> 日期：2026-07-16。V4.1 **NAS 免费切换 + 一次付费全链路均已通过**。
 
 ## 生产现状
 
@@ -10,38 +10,42 @@
 | NAS Config ID | `sha256:c0262e755c50274e36c9f44726379f83621628f93e4464aa8aff414b6c825153` |
 | 容器 | `xjiankong-trendradar` Id `4537d590…` Started `2026-07-15T16:18:04Z` RC=0 |
 | 代码基线 | TrendRadar `01264222`（`codex/v2-beta-history`） |
-| 直接回滚 | `v2-beta-v4-rc-20260715` / NAS `sha256:365c92d5…`；或 `v2-beta-rc-20260713` / `c122cdb56076…` |
-| 备份 | `/volume1/docker/trendradar-nas/backups/v4-1-rc-20260716-20260716-001621` |
-| 传输 tar | `/tmp/v2-beta-v4-rc-20260716.tar` · SHA-256 `d148ff549481886e93a16b91f61b041a4002a425b917e7220c56696f39fb696b` |
-| DiffID chain | `1a54fd0b36a1c48678dab2845c932f6ace1f1fd6069fe4a505e0625f17bcccfa`（Mac=NAS） |
-| 付费 | **未触发**；公网 index 仍为切换前快照 HTML（含 V4 suite，无 V4.1 evidence-toggle） |
+| 直接回滚 | `v2-beta-v4-rc-20260715` / `365c92d5…`；或 `v2-beta-rc-20260713` / `c122cdb56076…` |
+| 切换备份 | `backups/v4-1-rc-20260716-20260716-001621` |
+| 付费证据 | `backups/v4-1-task8-20260716-002145` |
+| 新报告 | `/html/2026-07-16/00-25.html`（公网 200；index 已同步） |
 
-## V4.1 内容
+## V4.1 内容（已在生产新页验证）
 
-| 改动 | 说明 |
+| 改动 | 公网计数（00-25） |
 |---|---|
-| 证据折叠 | 默认收起 `evidence-toggle` + `evidence-body[hidden]` |
-| 大厂色 | `ev-brand-*` / `r-src brand-*`（非彩虹） |
-| RSS 折叠 | 组内默认 5 条预览；过长不对等自动折叠 |
+| 证据折叠 `evidence-toggle` / `evidence-body[hidden]` | toggle×8；body×1 且 `hidden` |
+| 大厂色 `ev-brand-*` | ×7 |
+| RSS `feed-toggle` | ×7 |
+| suite / J1 / history-drawer | 均在 |
 
-## 切换摘要（2026-07-16）
+## 付费全链路（2026-07-16 一次）
 
-1. 只读基线：生产曾为 `v4-rc-20260715` / `365c92d5…`；四容器 Up。
-2. 备份 `.env` + 身份 → `backups/v4-1-rc-20260716-20260716-001621`。
-3. SCP + `docker load`；tar SHA OK；DiffID chain OK；NAS free `RC_IMPORT_OK`。
-4. 仅改 `TRENDRADAR_IMAGE`（行数 16=16；masked SHA 变化）。
-5. 仅 `docker compose up -d --no-deps --force-recreate trendradar`。
-6. peers（report-web / cloudflared / rss-proxy）Id/StartedAt/RC **未变**。
-7. 日志：crontab 有效、Web 8080 启动、无 ImportError/Traceback。
-8. 公网：`/` `/history.json` `/history.html`=200；`/.env` `/news/test.db` `/config/config.yaml` `/output/news/data.json`=404。
+| 字段 | 实测 |
+|---|---|
+| 触发 | `docker exec … sh -c "cd /app && /app/.venv/bin/python -m trendradar"`（非 login，绝对 venv） |
+| exit | **0**；stderr **0 字节** |
+| 热榜 | **11/11** 成功（失败: []） |
+| RSS | **41 成功 / 3 失败**（xai 404、elonmusk 429、GabrielPeterss4 404） |
+| 翻译 | **25/25** |
+| AI | `分析完成`；`deepseek/deepseek-chat` |
+| history.latest | `/html/2026-07-16/00-25.html`；schema 仅 `dates/latest/schema_version` |
+| 旧快照 | `00-05.html` 保留且公网 200 |
+| peers | report-web / cloudflared / rss-proxy Id/StartedAt/RC **未变** |
+| 公网安全 | `/` history 新/旧页 **200**；`/.env` `/news/test.db` `/config/config.yaml` `/output/news/data.json` **404** |
+| DOM | 容器内 + 公网 **`V4_1_DOM_OK` / `PUBLIC_V4_1 OK`** |
 
 ## 禁止
 
-- 自动付费重跑 / 自动 push / 清理备份·tar·旧镜像（须老板批准）
+- 自动再付费 / 自动 push / 清理备份·tar·旧镜像（须老板批准）
 - 在脏 `TrendRadar` v2-alpha 主 worktree 实施
 
-## 下一步（可选，须另批）
+## 下一步
 
-1. 一次付费全链路：验证新页含 `evidence-toggle` / `feed-toggle` / brand class。
-2. 稳定性观察继续。
-3. 清理 NAS `/tmp` tar、旧镜像等 —— **不要自动做**。
+1. 稳定性观察继续（cron `0 */4 * * *`）。
+2. 清理 NAS `/tmp` tar、旧镜像 —— **不要自动做**。

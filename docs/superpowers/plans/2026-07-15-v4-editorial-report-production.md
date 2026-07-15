@@ -142,17 +142,37 @@ git commit -m "feat: add editorial judgment hierarchy to web report"
 
 ### Task 5: 构建独立 RC 与一次性容器验证
 
-- [ ] **Step 1: 生产变更说明与确认闸门**
+- [x] **Step 1: 生产变更说明与确认闸门**
 
-向老板说明：构建 `linux/amd64` 新镜像，不修改 NAS；验证 fixture、import、入口和 HTML 结构。获得确认后才构建。
+老板已确认：仅本地 `linux/amd64` 构建与一次性容器免费验证；不修改 NAS、不 push、不部署。
 
-- [ ] **Step 2: 构建唯一 RC**
+- [x] **Step 2: 构建唯一 RC**（2026-07-15）
 
-使用项目现有 Dockerfile 和 Gate 9 已验证的跨架构流程，标签 `xjiankong-trendradar:v2-beta-v4-rc-20260715`；不得覆盖旧标签。记录 Config ID、平台、大小、RootFS DiffID chain 和构建提交。
+```bash
+docker build --platform linux/amd64 --pull=false \
+  --file docker/Dockerfile \
+  --tag xjiankong-trendradar:v2-beta-v4-rc-20260715 .
+```
 
-- [ ] **Step 3: 一次性容器免费断言**
+| 字段 | 实测 |
+|---|---|
+| 标签 | `xjiankong-trendradar:v2-beta-v4-rc-20260715` |
+| 构建提交 | `18c1fbad93f6c0e82b5c3994232c905425764ffd` |
+| Image ID | `sha256:18d49e97f936f50b354bf250fce05537dcb7dba8c4fc9c2c1cbcf17d3770ab4e` |
+| 平台 | `linux/amd64` |
+| Size | `138,116,057` bytes |
+| RootFS 层数 | 14 |
+| DiffID chain SHA-256 | `a6e19f4152598da1a628f75dd7d66338c708e865a8d4a9f5be7cd368d0b16687` |
+| Entrypoint / WorkingDir | `/entrypoint.sh` / `/app` |
+| 旧标签 | `v2-beta-rc-20260713` 未覆盖，仍为 `sha256:3c02dceafa86…` |
 
-断言 `RC_IMPORT_OK`、fixture 全过、V4 DOM 存在、邮件 renderer 不含 V4 class；容器必须 `--rm`，最终无残留。
+- [x] **Step 3: 一次性容器免费断言**
+
+- `RC_IMPORT_OK`：退出码 0，stdout 仅成功标记。
+- 扩展 `RC_CONTAINER_OK`：8 section、`.judgment-suite`、章节导航、证据单次渲染、metrics、Nitter→X fallback、邮件无 V4 class、`history-page-notice` 在 suite 外、reduced-motion / focus-visible 契约、history manifest；退出码 0。
+- `docker ps -a --filter ancestor=…v4-rc-20260715`：无残留。
+
+**Task 5 停点：** 本地 RC 已就绪；**未进入 Task 6 NAS 只读／传输**，须老板单独确认。
 
 ### Task 6: Gate V4-A／V4-B——NAS 只读基线、备份和传输
 

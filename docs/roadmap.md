@@ -9,7 +9,7 @@
 - 活动架构：A1 / TrendRadar；X Hosted MCP 已归档，不属于活动架构。
 - 生产基线：`xjiankong-trendradar:v2-beta-rc-20260713`（2026-07-14 经 Gate 10 切换上线，10D 付费全链路验收通过）；回滚基线保留 `v2-alpha-20260709` / `sha256:ea2d7183483d9026618a3d85313ac293087200e5a576b4e506366fc3bc83bb9d`。
 - v2-beta RC：功能基线 `8f7e385ac1453521a7ffffa9c5de43d725af76b9`，Docker 构建兼容性提交 `5c02c6ce`，Gate 9.1 最终 HEAD `61ba3932`；已部署至生产（Gate 10，2026-07-14），见下方 Gate 10 完成记录。
-- V4 编辑型报告：视觉与信息层级已由老板确认，权威原型为 `docs/superpowers/prototypes/2026-07-15-xjiankong-report-v4-editorial.html`。状态：**Codex 最终复审通过，本地代码已提交**（worktree `TrendRadar-v2-beta-history` / `codex/v2-beta-history` / `18c1fbad`；fixture 21/21；390／573／768／1280 与历史抽屉验收通过）；**尚未构建 RC、尚未访问 NAS、尚未部署生产**。设计与交接入口见 [V4 设计规格](superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md) 和 [V4 生产实施计划](superpowers/plans/2026-07-15-v4-editorial-report-production.md)。
+- V4 编辑型报告：视觉与信息层级已由老板确认，权威原型为 `docs/superpowers/prototypes/2026-07-15-xjiankong-report-v4-editorial.html`。状态：**Codex 最终复审通过；本地代码 `18c1fbad`；本地 RC `xjiankong-trendradar:v2-beta-v4-rc-20260715`（`sha256:18d49e97…`，`linux/amd64`，138,116,057 bytes；`RC_IMPORT_OK` + 扩展 `RC_CONTAINER_OK` 通过，无残留容器）**；**尚未访问 NAS、尚未切换生产、尚未付费验收**。设计与交接入口见 [V4 设计规格](superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md) 和 [V4 生产实施计划](superpowers/plans/2026-07-15-v4-editorial-report-production.md)。
 - 当前采集来源：中文热榜、X 账号 RSS、GitHub/HuggingFace/Release RSS。小红书和公众号尚未接入。
 
 ## 二、执行顺序与状态
@@ -19,7 +19,7 @@
 | 1 | Gate 9／9.1：本地 RC 镜像、无障碍加固与临时容器验证 | 已完成 | 2026-07-13：代码审查、真实 Chrome 交互、`RC_IMPORT_OK`、`RC_CONTAINER_OK` 均通过，且无常驻验证容器 | `xjiankong-trendradar:v2-beta-rc-20260713`；详见 Gate 9.1 实施计划 | Terra 高／Sol 高 |
 | 2 | Gate 10：v2-beta 生产同步与回滚方案 | 已完成（10A–10D 全部通过） | 10A/10B 已完成；老板已接受 RootFS 等价作为 10B 通过；10C 已执行（2026-07-14）；10D 一次付费全链路验收已通过（2026-07-14） | 10C/10D 见下方完成记录；[Gate 10D 交接文档](gate10d-handoff.md)；进入阶段 3 稳定性观察 | Sol 高 |
 | 3 | v2-beta 上线后稳定性观察 | 进行中 | Gate 10 已获批准并完成生产部署（10A–10D 全通过） | 连续记录热榜、RSS、翻译、AI 分析、历史快照和公网安全路径；异常必须标明来源与影响；已起每 4h 定时只读观察，日志 `docs/stability-observation.md` | Terra 高 |
-| 4 | V4 编辑型报告生产化 | 本地已提交，待 RC 构建 | Codex 最终复审通过；本地 Task 1–4 已完成；禁止自动进入 RC／NAS／生产 | 下一步：单独确认后构建独立 RC → 逐闸门生产切换，见 V4 生产实施计划 | Terra 高／Sol 高 |
+| 4 | V4 编辑型报告生产化 | 本地 RC 已验证，待 NAS 闸门 | Task 1–5 完成（提交 `18c1fbad`，RC `v2-beta-v4-rc-20260715` 免费容器断言通过）；禁止自动进入 NAS／生产 | 下一步：单独确认后 V4-A 只读基线 → 传输 → 切换，见 V4 生产实施计划 | Terra 高／Sol 高 |
 | 5 | K/AI 过滤实验 | 未开始 | 冻结连续 7 天的同批新闻与 RSS SQLite 快照；建立不少于 300 条人工标注集 | 同快照下的 Variant K/AI 精确率、重要事件漏报、人工复核量与成本对比 | Sol 中 |
 | 6 | 中文内容平台与 AIGC 赛道选型调研 | 未开始 | 阶段 3 已开始且主链无阻塞性问题；不改生产 | GitHub 候选项目清单、淘汰依据、公开来源可用性、四赛道监测设计 | Sol 中 |
 | 7 | 单来源试点与质量验证 | 未开始 | 阶段 6 设计经老板确认；获得对应外部配置批准 | 单一来源、最小关键词/分类、命中质量和稳定性报告；不自动扩大范围 | Terra 高；国产模型须先校准 |

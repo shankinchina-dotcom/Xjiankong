@@ -1,6 +1,6 @@
 # V4 编辑型情报报告 UI 设计
 
-> 状态：**老板已确认视觉方向；Codex 最终复审通过，本地代码已提交；尚未构建镜像、尚未访问 NAS、尚未部署。**
+> 状态：**老板已确认视觉方向；Codex 最终复审通过；本地代码 `18c1fbad`；本地 RC `v2-beta-v4-rc-20260715` 已构建并通过一次性容器免费验证；尚未访问 NAS、尚未部署生产。**
 >
 > 权威视觉原型：[`../prototypes/2026-07-15-xjiankong-report-v4-editorial.html`](../prototypes/2026-07-15-xjiankong-report-v4-editorial.html)。原型仅用于视觉和结构裁定，不得直接复制其中的模拟新闻、固定统计或来源编号进入生产。
 
@@ -105,7 +105,7 @@ baseline HEAD: 61ba393225de1b6d9d165a1dcddc189073f3e2d6
 
 ## 七、当前边界与交接说明
 
-- 实施 worktree 为 `TrendRadar-v2-beta-history`（`codex/v2-beta-history`）；V4 网页 renderer 本地提交 `18c1fbad`（相对基线 `61ba3932`）。`output/history.json` 与 `__pycache__` 等未跟踪产物继续保留，不得清理进提交。
-- Codex 最终复审通过（证据单次渲染、208px 桌面导航、统一 metrics、history-page-notice 在 suite 外、reduced-motion、chip 44px、四视口与历史抽屉验收）。**尚未构建 RC、访问 NAS、付费调用或部署生产**；后续按实施计划 Task 5+ 逐闸门确认。
+- 实施 worktree 为 `TrendRadar-v2-beta-history`（`codex/v2-beta-history`）；V4 网页 renderer 本地提交 `18c1fbad`（相对基线 `61ba3932`）。本地 RC `xjiankong-trendradar:v2-beta-v4-rc-20260715` / `sha256:18d49e97f936…` / `linux/amd64` / 138,116,057 bytes；`RC_IMPORT_OK` 与扩展 `RC_CONTAINER_OK` 通过，无残留验证容器。旧生产回滚基线仍为 `v2-beta-rc-20260713`。
+- Codex 最终复审通过（证据单次渲染、208px 桌面导航、统一 metrics、history-page-notice 在 suite 外、reduced-motion、chip 44px、四视口与历史抽屉验收）。**尚未访问 NAS、付费调用或部署生产**；后续按实施计划 Task 6+ 逐闸门确认。
 - `/Users/shankluo/AI/Claude/TrendRadar` 主 worktree 位于 `v2-alpha` 且有多项用户修改，禁止在该 worktree 实施 V4。
 - 实施入口见 [`../plans/2026-07-15-v4-editorial-report-production.md`](../plans/2026-07-15-v4-editorial-report-production.md)。

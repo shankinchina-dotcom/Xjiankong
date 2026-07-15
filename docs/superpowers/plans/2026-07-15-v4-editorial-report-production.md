@@ -209,17 +209,28 @@ docker build --platform linux/amd64 --pull=false \
 
 ### Task 7: Gate V4-C——生产镜像单点切换
 
-- [ ] **Step 1: Sol 高生产前审计**
+- [x] **Step 1: Sol 高生产前审计**（2026-07-15）
 
-确认只改 `.env` 的 `TRENDRADAR_IMAGE` 一行；Nginx、Compose、Cloudflare、config、output 均无变化。回滚值固定为 `xjiankong-trendradar:v2-beta-rc-20260713`。
+切换前：trendradar=`5c88cadb…` / `c122cdb56076…` / `v2-beta-rc-20260713`；report-web / cloudflared / rss-proxy 身份与 Task 6 一致；备份 `v4-rc-20260715-224353` manifest OK；新旧镜像均可 inspect。
 
-- [ ] **Step 2: 获得单独确认后切换**
+- [x] **Step 2: 获得单独确认后切换**（2026-07-15）
 
-写入镜像行后立即验证 masked diff；只执行 `docker compose up -d --no-deps --force-recreate trendradar`。不得重建 `report-web`、`cloudflared`、`rss-proxy`。
+- `.env`：`TRENDRADAR_IMAGE` 由 `v2-beta-rc-20260713` → `v2-beta-v4-rc-20260715`。
+- masked diff：`7c0dbe03dbb15ec2fbddf8cfcc16003d57556be500ac5c16b21371a10387f435` 前后一致；行数 16=16。
+- 仅 `docker compose up -d --no-deps --force-recreate trendradar`，退出码 0。
 
-- [ ] **Step 3: 免费验收并停止**
+- [x] **Step 3: 免费验收并停止**（2026-07-15）
 
-验证四容器 Up、trendradar 镜像为新 RC、其他三容器身份未变、无 import 错误、现有公网首页与敏感路径状态不变。停止，不自动触发报告。
+| 项 | 结果 |
+|---|---|
+| trendradar | Id `1466e949…`，Image **`sha256:365c92d50928525df93dfb9943051d914c647ac2337f58f29df245536753d1dc`**，标签 `v2-beta-v4-rc-20260715`，Started `2026-07-15T15:00:48Z`，RC=0 |
+| report-web / cloudflared / rss-proxy | Id/Image/StartedAt/RestartCount **未变**；report-web healthy |
+| 日志 | supercronic crontab 有效；Web 8080 启动；无 ImportError/Traceback/配置加载错误 |
+| 公网 | `/`=200；`/.env`/`/news/test.db`/`/config/config.yaml`=404 |
+| 回滚 | **未发生** |
+| 付费报告 | **未触发** |
+
+**Task 7 停点：** 生产已切换至 V4 RC；**Task 7 已执行并经 Codex 复审通过**；**Task 8 未批准／未执行**。
 
 ### Task 8: Gate V4-D——一次付费全链路验收
 

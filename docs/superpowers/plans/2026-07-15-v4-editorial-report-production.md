@@ -266,18 +266,19 @@ docker build --platform linux/amd64 --pull=false \
 - [x] **本地实现与 fixture 24/24**（2026-07-16）
   - 证据区默认折叠；大厂色点状 token；RSS 组默认 5 条 + 展开剩余。
   - 交接：[`2026-07-16-v4-1-ui-polish-handoff.md`](2026-07-16-v4-1-ui-polish-handoff.md)
-- [x] **本地提交 + RC 构建 + 一次性容器**（`01264222`；`v2-beta-v4-rc-20260716` / `sha256:442efe38…`；`RC_IMPORT_OK`/`RC_CONTAINER_OK`）
-- [x] **本地 docker save 传输物**（`/tmp/v2-beta-v4-rc-20260716.tar` + `.sha256`；见交接摘要）
-- [ ] **老板确认后 NAS 单点切换**（只重建 trendradar；生产仍为 `v2-beta-v4-rc-20260715`）
+- [x] **本地提交 + RC 构建 + 一次性容器**（`01264222`；`v2-beta-v4-rc-20260716` / Mac `sha256:442efe38…`；`RC_IMPORT_OK`/`RC_CONTAINER_OK`）
+- [x] **本地 docker save 传输物**（tar SHA `d148ff549481…`）
+- [x] **NAS 单点切换（2026-07-16 老板批准）**
+  - 备份：`backups/v4-1-rc-20260716-20260716-001621`
+  - load 后 NAS Config ID `sha256:c0262e755c50…`；DiffID chain = Mac
+  - 仅改 `TRENDRADAR_IMAGE` → `v2-beta-v4-rc-20260716`；仅 recreate `trendradar`
+  - peers 未变；日志干净；公网 200/404 符合预期；**未付费重跑**
+  - 细节：[`2026-07-16-v4-1-ui-polish-handoff.md`](2026-07-16-v4-1-ui-polish-handoff.md)
 
 ## 下个 Agent 的第一条动作
 
 ```bash
-# 1) 确认本地 RC 与传输物
-docker image inspect xjiankong-trendradar:v2-beta-v4-rc-20260716 --format '{{.Id}} {{.Architecture}} {{.Size}}'
-test -f /tmp/v2-beta-v4-rc-20260716.tar && shasum -a 256 -c /tmp/v2-beta-v4-rc-20260716.tar.sha256
-# 2) 无老板批准不得 SCP / load / 改 .env / recreate
-# 生产仍为 v2-beta-v4-rc-20260715
+ssh z5451530@192.168.1.193 'export PATH=/usr/local/bin:$PATH; sudo -n docker inspect xjiankong-trendradar --format "{{.Config.Image}} {{.Image}}"'
+# 预期：v2-beta-v4-rc-20260716 / sha256:c0262e755c50…
+# 可选付费验收须老板另批；勿自动清理 tar/备份/旧镜像
 ```
-
-从 Task 9 **NAS 闸门**继续；不要在脏 `TrendRadar` 主 worktree 实施；不要自动付费重跑。

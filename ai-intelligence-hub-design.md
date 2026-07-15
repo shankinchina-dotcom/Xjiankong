@@ -1,6 +1,6 @@
 # AI 行业情报系统设计
 
-> 状态：A1 TrendRadar 在群晖 NAS 四容器生产运行，公网只读日报 `https://trend.shankluo.cc`。生产镜像 **`v2-beta-v4-rc-20260715`**（V4 编辑型报告 + Task 8 付费全链路已过）；直接回滚 `v2-beta-rc-20260713`。**V4.1**（证据折叠／大厂色／RSS 预览）本地 RC `v2-beta-v4-rc-20260716` 已验证，**待 NAS 闸门**。历史 v2-alpha／Gate 10 细节见 roadmap。
+> 状态：A1 TrendRadar 在群晖 NAS 四容器生产运行，公网只读日报 `https://trend.shankluo.cc`。生产镜像 **`v2-beta-v4-rc-20260716`**（V4 编辑型 + V4.1 证据折叠／大厂色／RSS 预览；2026-07-16 免费切换）。直接回滚 `v2-beta-v4-rc-20260715` 或 `v2-beta-rc-20260713`。可选付费验收未自动执行。细节见 roadmap。
 >
 > 活动架构最后核对：2026-07-16。主进度源：[`docs/roadmap.md`](docs/roadmap.md)。
 >

@@ -1,29 +1,22 @@
 # V4.1 UI 增量交接摘要（压缩上下文）
 
-> 日期：2026-07-16。供后续 Agent 快速接手；细节见 V4 设计／计划与本仓库 git 历史。
+> 日期：2026-07-16。V4.1 **已完成 NAS 免费切换**；未付费重跑。
 
-## 生产现状（不要回退）
+## 生产现状
 
 | 项 | 值 |
 |---|---|
-| 生产镜像 | `xjiankong-trendradar:v2-beta-v4-rc-20260715` |
-| NAS Config ID | `sha256:365c92d50928525df93dfb9943051d914c647ac2337f58f29df245536753d1dc` |
-| 直接回滚 | `v2-beta-rc-20260713` / NAS `sha256:c122cdb56076…` |
-| 代码基线（已上线） | TrendRadar `18c1fbad` |
-| V4.1 代码 | TrendRadar `01264222`（`codex/v2-beta-history`） |
-| V4.1 本地 RC | `xjiankong-trendradar:v2-beta-v4-rc-20260716` / Mac ID `sha256:442efe385605…` / amd64 / Size 138376197 / DiffID chain SHA `1a54fd0b36a1c486…`；`RC_IMPORT_OK`+`RC_CONTAINER_OK`；**未部署** |
-| 本地传输物 | `/tmp/v2-beta-v4-rc-20260716.tar`（138400768 B，perm 600）· SHA-256 `d148ff549481886e93a16b91f61b041a4002a425b917e7220c56696f39fb696b` |
-| Task 8 证据 | NAS `backups/v4-task8-20260715-231822`（勿删） |
+| 生产镜像 | `xjiankong-trendradar:v2-beta-v4-rc-20260716` |
+| NAS Config ID | `sha256:c0262e755c50274e36c9f44726379f83621628f93e4464aa8aff414b6c825153` |
+| 容器 | `xjiankong-trendradar` Id `4537d590…` Started `2026-07-15T16:18:04Z` RC=0 |
+| 代码基线 | TrendRadar `01264222`（`codex/v2-beta-history`） |
+| 直接回滚 | `v2-beta-v4-rc-20260715` / NAS `sha256:365c92d5…`；或 `v2-beta-rc-20260713` / `c122cdb56076…` |
+| 备份 | `/volume1/docker/trendradar-nas/backups/v4-1-rc-20260716-20260716-001621` |
+| 传输 tar | `/tmp/v2-beta-v4-rc-20260716.tar` · SHA-256 `d148ff549481886e93a16b91f61b041a4002a425b917e7220c56696f39fb696b` |
+| DiffID chain | `1a54fd0b36a1c48678dab2845c932f6ace1f1fd6069fe4a505e0625f17bcccfa`（Mac=NAS） |
+| 付费 | **未触发**；公网 index 仍为切换前快照 HTML（含 V4 suite，无 V4.1 evidence-toggle） |
 
-## V4 主线结论
-
-- 编辑型层级已上线：`judgment-suite`、J1–J3、208px 导航、metrics label/value。
-- 权威视觉是 **V4 editorial**，不是 V3 青绿／彩虹原型。
-- 邮件隔离不计入 Task 8 新证据；沿用本地 fixture。
-
-## V4.1 本地增量（代码 + RC 已完成）
-
-仓库：`/Users/shankluo/AI/Claude/TrendRadar-v2-beta-history`（`codex/v2-beta-history`）
+## V4.1 内容
 
 | 改动 | 说明 |
 |---|---|
@@ -31,33 +24,24 @@
 | 大厂色 | `ev-brand-*` / `r-src brand-*`（非彩虹） |
 | RSS 折叠 | 组内默认 5 条预览；过长不对等自动折叠 |
 
-文件：`formatter.py`、`html.py`、`v2_beta_deep_space_ui.py`  
-验证：fixture **24/24** + v2-alpha 回归；提交 `01264222`；镜像 `v2-beta-v4-rc-20260716`（`RC_IMPORT_OK`+`RC_CONTAINER_OK`）。
+## 切换摘要（2026-07-16）
+
+1. 只读基线：生产曾为 `v4-rc-20260715` / `365c92d5…`；四容器 Up。
+2. 备份 `.env` + 身份 → `backups/v4-1-rc-20260716-20260716-001621`。
+3. SCP + `docker load`；tar SHA OK；DiffID chain OK；NAS free `RC_IMPORT_OK`。
+4. 仅改 `TRENDRADAR_IMAGE`（行数 16=16；masked SHA 变化）。
+5. 仅 `docker compose up -d --no-deps --force-recreate trendradar`。
+6. peers（report-web / cloudflared / rss-proxy）Id/StartedAt/RC **未变**。
+7. 日志：crontab 有效、Web 8080 启动、无 ImportError/Traceback。
+8. 公网：`/` `/history.json` `/history.html`=200；`/.env` `/news/test.db` `/config/config.yaml` `/output/news/data.json`=404。
 
 ## 禁止
 
-- 自动 push／自动生产切换／自动付费重跑
-- 清理备份、tar、旧镜像（须老板批准）
-- 在脏的 `TrendRadar` v2-alpha 主 worktree 实施
+- 自动付费重跑 / 自动 push / 清理备份·tar·旧镜像（须老板批准）
+- 在脏 `TrendRadar` v2-alpha 主 worktree 实施
 
-## 下一步闸门
+## 下一步（可选，须另批）
 
-1. ~~提交 V4.1 代码~~（`01264222`）
-2. ~~构建本地 RC + 容器断言~~（`v2-beta-v4-rc-20260716`）
-3. ~~本地 `docker save` 传输物~~（见下文固定身份）
-4. **须老板批准**：SCP→NAS `docker load` → 只改 `.env` 的 `TRENDRADAR_IMAGE` → 只 `--force-recreate trendradar`
-5. 可选一次付费验收；并行稳定性观察
-
-### NAS 切换固定身份（批准后沿用）
-
-| 项 | 值 |
-|---|---|
-| 新标签 | `xjiankong-trendradar:v2-beta-v4-rc-20260716` |
-| Mac Config ID | `sha256:442efe385605b9a1b5a377b0090fc7360a335b798c3082a46c7a4c65418390f3` |
-| 平台 / Size | linux/amd64 · 138376197 bytes |
-| DiffID chain SHA-256 | `1a54fd0b36a1c48678dab2845c932f6ace1f1fd6069fe4a505e0625f17bcccfa`（14 层；权威等价） |
-| tar SHA-256 | `d148ff549481886e93a16b91f61b041a4002a425b917e7220c56696f39fb696b` |
-| 当前生产 | `v2-beta-v4-rc-20260715` / NAS `sha256:365c92d5…` |
-| 直接回滚 | `v2-beta-rc-20260713` / NAS `sha256:c122cdb56076…` |
-| 范围 | **仅** trendradar；不动 report-web / nginx / Cloudflare / rss-proxy / 配置 |
-| 付费 | 切换后**不**自动跑；须另批 |
+1. 一次付费全链路：验证新页含 `evidence-toggle` / `feed-toggle` / brand class。
+2. 稳定性观察继续。
+3. 清理 NAS `/tmp` tar、旧镜像等 —— **不要自动做**。

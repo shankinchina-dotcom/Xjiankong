@@ -1,8 +1,8 @@
 # Xjiankong v2-beta 策划：AI 情报终端与历史版本浏览
 
-> 状态：核心第一阶段已完成本地实现与 RC 冻结，未部署。历史 manifest、历史入口／抽屉／归档页、深空报告网页渲染和 Nitter→X fallback 已在 `codex/v2-beta-rc` / `8f7e385a` 实现并通过免费回归；当前仅阻塞在 Gate 9 本地 Docker 镜像验证。详见 `2026-07-10-v2-beta-deep-space-report-ui-design.md` 和 `../plans/2026-07-11-v2-beta-rc-image-validation.md`。
+> 状态：**设计已落地。v2-beta 已于 2026-07-14 经 Gate 10 部署至生产，10D 验收通过；执行进度以 `../../roadmap.md` 为权威。** 历史 manifest、历史入口／抽屉／归档页、深空报告网页渲染和 Nitter→X fallback 已在 `codex/v2-beta-rc` / `8f7e385a` 实现并通过免费回归。详见 `2026-07-10-v2-beta-deep-space-report-ui-design.md` 和 `../plans/2026-07-11-v2-beta-rc-image-validation.md`。
 >
-> 基线：v2-alpha 已于 2026-07-09 生产上线，当前生产镜像为 `xjiankong-trendradar:v2-alpha-20260709`。
+> 基线：v2-beta 已于 2026-07-14 经 Gate 10 部署上线，当前生产镜像为 `xjiankong-trendradar:v2-beta-rc-20260713`（回滚基线 `v2-alpha-20260709`）；详见 `../../roadmap.md`。
 >
 > 目标版本：v2-beta。
 >

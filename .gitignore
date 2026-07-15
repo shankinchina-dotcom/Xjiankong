@@ -1,6 +1,12 @@
 .claude/
 .worktrees/
+.workbuddy/
+.superpowers/
+.DS_Store
+**/.DS_Store
 /dist/
 /deploy/nas/.env
 /deploy/nas/output/
 /deploy/nas/config/
+/deploy/nas/proxy/config.yaml
+/deploy/nas/proxy/data/

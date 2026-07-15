@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<!--
+  设计系统：Xjiankong AI 情报报告页 · 重构原型
+  消费令牌：2026-07-15-xjiankong-redesign-design-tokens.md（DESIGN.md）
+  基底：Linear 低饱和面板结构 × v2-beta 深空蓝底色 × 墨青/深紫/青灰跨色系渐变
+  三处已裁定偏离：① 左侧细导航轨 240px（非内容栏）② emoji 作板块主图标（saturate .82, ≤18px）③ section-01 渲染为 hero 论证支撑
+  裁定④（本次增量）：大厂主题色强调板（§2.9）+ 三类高亮语义（§2.10 key-highlight / evidence-strong / reference-highlight）
+    —— 仅作点状语义锚点：每屏强色标记 ≤3 处、不均等层次、小红书红仅点状未铺面、不替代 §2.7 状态色。
+  密度纪律（审查回修后）：reference-highlight 仅保留「ev-strong 卡内来源 + 每节唯一权威来源」，其余 [R-xx] 回退中性灰蓝胶囊；
+    RSS 信源名（handle）按 §2.10-c 保留大厂色（独立更新区，不计入章节屏强色）。
+  本文件为独立原型，不部署、不修改 NAS 生产环境、不触碰 v2-beta 线上文件。
+  增量微调（2026-07-15 第二轮）：① 顶栏指标字体明显化（.metric-value 亮色+字重+微光 / .metric-label 次级灰）；
+    ② emoji 亮色系圆形徽章（.emoji-badge）包裹所有板块/章节标题前 emoji；  ③ 全站占位内容替换为 trend.shankluo.cc 真实新闻（3 核心判断 + 8 章节 + RSS 双栏）。
+  增量微调（2026-07-15 第三轮 V3）：① F1 hero 指标彩虹装饰带（仅 hero，去原 text-shadow 怪光）② F3 body 背景切青绿山水渐变（绿主导，墨青绿/石绿为主角，蓝仅末端远山点缀）③ F2 证据链默认收起、点击 toggle / 结论卡展开（grid-rows 0fr→1fr 折叠）。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>热点新闻分析 · 2026-07-15</title>
+<style>
+/* ============================================================
+   1. DESIGN TOKENS（来自 DESIGN.md §2 / §3 / §5）
+   ============================================================ */
+:root{
+  /* 继承基底（v2-beta 深空令牌，不可丢弃） */
+  --bg-base:#07111f;
+  --bg-field:#0c1c33;
+  --surface-report:rgba(17,39,70,.82);
+  --surface-evidence:rgba(12,29,52,.76);
+  --surface-focus:linear-gradient(135deg, rgba(27,86,166,.58), rgba(21,52,106,.82));
+  --line-subtle:rgba(153,190,245,.18);
+  --line-active:rgba(111,178,255,.55);
+  --text-primary:#edf5ff;
+  --text-secondary:#9eb4d3;
+  --text-tertiary:#6c7f99;
+  --accent-legacy:#75b2ff;
+
+  /* 强调（老板指定 #0369a1 / #0ea5e9） */
+  --accent-deep:#0369a1;
+  --accent:#0ea5e9;
+
+  /* F1：Hero 彩虹装饰带（仅 hero 指标使用，不计入强色配额） */
+  --rainbow:linear-gradient(90deg, #ff5b5b 0%, #f0a868 16%, #f5d76e 33%, #7fc9a0 50%, #5fd0d0 66%, #6aa8ff 83%, #b48cff 100%);
+
+  /* R4 跨色系低饱和渐变 + 角光（旧 v2-beta 蓝系，保留作兼容参考，不再用于 body） */
+  --bg-gradient:linear-gradient(160deg,#07111f 0%,#0a1729 42%,#0c1c33 100%);
+  --bg-glow-ink:radial-gradient(120% 80% at 10% -5%,rgba(26,102,110,.30) 0%,rgba(7,17,31,0) 58%);
+  --bg-glow-violet:radial-gradient(90% 70% at 94% 4%,rgba(75,63,115,.26) 0%,rgba(7,17,31,0) 55%);
+  --bg-glow-slate:radial-gradient(100% 60% at 50% 102%,rgba(40,58,82,.28) 0%,rgba(7,17,31,0) 60%);
+
+  /* F3：V3 青绿山水背景（绿主导，墨青绿/石绿为主角，蓝仅末端远山黛青点缀；深色低噪） */
+  --bg-gradient-v3:linear-gradient(158deg, #07111f 0%, #0c2a2e 30%, #16342d 58%, #1a2b3a 100%);
+  --bg-glow-1:radial-gradient(105% 78% at 6% 8%, rgba(28,110,100,.30) 0%, rgba(7,17,31,0) 60%);
+  --bg-glow-2:radial-gradient(100% 72% at 92% 98%, rgba(22,80,66,.22) 0%, rgba(7,17,31,0) 62%);
+  --bg-glow-3:radial-gradient(90% 58% at 80% 100%, rgba(201,162,39,.14) 0%, rgba(7,17,31,0) 62%);
+
+  /* 面板 / 边框 */
+  --panel-1:rgba(17,39,70,.82);
+  --panel-2:rgba(12,29,52,.76);
+  --panel-solid:#0e2038;
+  --panel-hover:rgba(22,48,84,.90);
+  --border-subtle:rgba(153,190,245,.18);
+  --border-strong:rgba(153,190,245,.32);
+  --border-accent:rgba(14,165,233,.38);
+
+  /* 低饱和辅助色（R4） */
+  --aux-ink-teal:#1a666e;
+  --aux-violet:#4b3f73;
+  --aux-slate:#44586e;
+
+  /* 文字色阶 */
+  --text-mono:#a9c2dc;
+  --text-inverse:#06121f;
+
+  /* 状态色（低饱和，禁用高饱和红 — 准则 C） */
+  --status-success:rgba(58,143,122,.16);   --status-success-text:#7fc9b6;
+  --status-progress:rgba(90,127,176,.16);   --status-progress-text:#9cc0e8;
+  --status-warning:rgba(176,138,74,.16);    --status-warning-text:#e0c088;
+  --status-critical:rgba(154,90,95,.16);    --status-critical-text:#d99aa0;
+
+  /* 分类色（墨青=分析 / 深紫=洞察 / 青灰=常规） */
+  --cat-analysis-bg:rgba(26,102,110,.16);   --cat-analysis-text:#7fc0c4;
+  --cat-insight-bg:rgba(75,63,115,.18);     --cat-insight-text:#b3a6d6;
+  --cat-regular-bg:rgba(68,88,110,.18);     --cat-regular-text:#a7b6c8;
+
+  /* 大厂主题语义强调色（裁定④ · 语义强调，非主色/状态色，仅点状标记，§2.9） */
+  --brand-xhs:#FF2442;            --brand-xhs-tint:rgba(255,36,66,.10);
+  --brand-siemens:#009999;        --brand-siemens-tint:rgba(0,153,153,.12);
+  --brand-apple:#0071E3;          --brand-apple-tint:rgba(0,113,227,.12);
+  --brand-apple-lift:#3a93ff;     /* 深底小号文字提亮变体：#0071E3 对比 4.03→换 #3a93ff 对比 6.13 */
+  --brand-insight-gold:#c9a227;   --brand-insight-gold-tint:rgba(201,162,39,.10);
+
+  /* 字体（系统栈，无外部依赖 — 技术约束） */
+  --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+
+  /* 间距（8px 基准栅格，R1 统一基线） */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px; --space-12:48px;
+
+  /* 圆角 */
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
+
+  /* 阴影（低噪） */
+  --shadow-raised:0 2px 12px rgba(20,40,80,.25);
+  --shadow-drawer:-16px 0 44px rgba(0,0,0,.50);
+
+  /* 布局 */
+  --container-max:1320px;
+  --rail-width:240px;
+  --gutter:20px;
+
+  /* 字号阶梯（桌面 ≥1024 基准，§3.2） */
+  --fs-display:30px; --fs-h1:20px; --fs-h2:18px; --fs-h3:15px;
+  --fs-body:15px; --fs-small:13px; --fs-micro:12px; --fs-mono:13px;
+}
+
+/* ============================================================
+   2. RESET & BASE
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-ui);
+  font-size:var(--fs-body);
+  line-height:1.70;
+  color:var(--text-primary);
+  background:var(--bg-base);
+  /* R4：跨色系低饱和渐变 + 三层角光建立存在感 */
+  background-image:var(--bg-glow-1),var(--bg-glow-2),var(--bg-glow-3),var(--bg-gradient-v3);
+  background-attachment:fixed;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-decoration:none}
+::selection{background:rgba(14,165,233,.30)}
+
+/* emoji 语义标记层（偏离#2：saturate .82, ≤18px） */
+.emoji{font-size:17px;line-height:1;filter:saturate(.82);display:inline-block;vertical-align:-2px}
+
+/* emoji 亮色系徽章（增量微调：深色底上提亮 emoji，浅色圆形徽章降噪；板块/章节标题前 emoji 统一包裹） */
+.emoji-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);box-shadow:inset 0 0 8px rgba(255,255,255,.06)}
+.emoji-badge .emoji{filter:saturate(.82) drop-shadow(0 0 4px rgba(255,255,255,.12));font-size:18px}
+
+/* 等宽数据 */
+.mono{font-family:var(--font-mono);font-size:var(--fs-mono);color:var(--text-mono);letter-spacing:.01em}
+
+/* ============================================================
+   3. CAPSULE BADGE（§4.10 状态 / 分类胶囊）
+   ============================================================ */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;
+  border-radius:var(--radius-pill);font-size:var(--fs-micro);font-weight:500;
+  letter-spacing:.04em;border:1px solid;white-space:nowrap;
+}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.badge.success{background:var(--status-success);color:var(--status-success-text);border-color:rgba(58,143,122,.34)}
+.badge.progress{background:var(--status-progress);color:var(--status-progress-text);border-color:rgba(90,127,176,.34)}
+.badge.warning{background:var(--status-warning);color:var(--status-warning-text);border-color:rgba(176,138,74,.34)}
+.badge.critical{background:var(--status-critical);color:var(--status-critical-text);border-color:rgba(154,90,95,.34)}
+.badge.cat-analysis{background:var(--cat-analysis-bg);color:var(--cat-analysis-text);border-color:rgba(26,102,110,.34)}
+.badge.cat-insight{background:var(--cat-insight-bg);color:var(--cat-insight-text);border-color:rgba(75,63,115,.38)}
+.badge.cat-regular{background:var(--cat-regular-bg);color:var(--cat-regular-text);border-color:rgba(68,88,110,.38)}
+
+/* ============================================================
+   4. INTEL TOPBAR（§4.1 吸顶情报栏）
+   ============================================================ */
+.intel-topbar{
+  position:sticky;top:0;z-index:200;height:56px;
+  display:flex;align-items:center;gap:var(--space-4);
+  padding:0 var(--space-6);
+  background:rgba(7,17,31,.86);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border-subtle);
+}
+.topbar-brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--text-primary)}
+.topbar-brand .emoji{font-size:18px}
+.topbar-date{font-family:var(--font-mono);font-size:var(--fs-mono);color:var(--text-tertiary)}
+.topbar-spacer{flex:1}
+.topbar-status{display:flex;align-items:center;gap:10px}
+.topbar-btn{
+  display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;
+  background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);
+  color:var(--text-secondary);font-size:var(--fs-small);cursor:pointer;transition:border-color .18s,color .18s;
+}
+.topbar-btn:hover{border-color:var(--border-accent);color:var(--text-primary)}
+.topbar-btn .emoji{font-size:16px}
+.icon-btn{
+  display:none;align-items:center;justify-content:center;width:40px;height:40px;
+  background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);
+  color:var(--text-secondary);font-size:18px;cursor:pointer;
+}
+.icon-btn:hover{border-color:var(--border-accent);color:var(--text-primary)}
+
+/* ============================================================
+   5. LAYOUT（§5 / §8 三档）
+   ============================================================ */
+.layout{
+  max-width:var(--container-max);margin:0 auto;
+  display:flex;align-items:flex-start;gap:var(--gutter);
+  padding:var(--space-6) var(--space-6) var(--space-12);
+}
+
+/* 5.1 左侧细导航轨（PC 常驻，240px，仅导航非内容栏 — 偏离#1） */
+.section-rail{
+  width:var(--rail-width);flex:none;
+  position:sticky;top:56px;height:calc(100vh - 56px);
+  background:rgba(14,32,56,.72);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);padding:var(--space-4);
+  display:flex;flex-direction:column;gap:4px;overflow-y:auto;
+}
+.rail-title{display:flex;align-items:center;gap:6px;font-size:var(--fs-micro);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary);
+  padding:6px 8px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:6px}
+.rail-link{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);
+  color:var(--text-secondary);font-size:var(--fs-small);cursor:pointer;
+  border-left:2px solid transparent;transition:background .16s,color .16s,border-color .16s;
+}
+.rail-link .rail-num{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--accent-deep);flex:none;width:18px}
+.rail-link .emoji{font-size:16px}
+.rail-link:hover{background:rgba(14,165,233,.08);color:var(--text-primary)}
+.rail-link.active{background:rgba(14,165,233,.10);color:var(--text-primary);border-left-color:var(--accent)}
+.rail-history{margin-top:auto;display:flex;align-items:center;gap:8px;padding:10px;
+  border-top:1px solid var(--border-subtle);color:var(--text-secondary);font-size:var(--fs-small);cursor:pointer;border-radius:var(--radius-sm)}
+.rail-history:hover{color:var(--text-primary);background:rgba(14,165,233,.08)}
+.rail-history .emoji{font-size:16px}
+
+/* 5.2 平板顶条（768–1023：横滚 chip 行） */
+.rail-topbar{display:none}
+
+/* 5.3 主列 */
+.report-shell{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-8)}
+
+/* ============================================================
+   6. JUDGMENT HERO（§4.2 单一核心判断模块 — R2 合并产物）
+   ============================================================ */
+.judgment-hero{
+  background:var(--surface-focus);border:1px solid var(--border-accent);
+  border-radius:var(--radius-lg);padding:28px 32px;
+  box-shadow:var(--shadow-raised);
+}
+.hero-eyebrow{font-family:var(--font-mono);font-size:var(--fs-micro);letter-spacing:.06em;
+  color:var(--text-tertiary);text-transform:uppercase}
+.hero-head{display:flex;align-items:center;gap:10px;margin:10px 0 12px}
+.hero-head .emoji{font-size:18px}
+.hero-head h1{font-size:var(--fs-h1);font-weight:600;color:var(--text-secondary)}
+.hero-judgment{font-size:var(--fs-display);font-weight:700;line-height:1.30;letter-spacing:-.01em;color:var(--text-primary);max-width:880px}
+.hero-metrics{display:flex;flex-wrap:wrap;gap:var(--space-6);margin:22px 0 18px;
+  padding:14px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)}
+.metric{display:flex;flex-direction:column;gap:3px}
+
+/* 顶栏指标字体明显化（增量微调：深底上数字/主值一眼可读，数字比标签更亮、字重更高，整体对比度提升但不刺眼） */
+.metric-value{color:#e2e8f0;font-weight:600;font-family:var(--font-mono);font-size:15px}
+/* F1：hero 指标套彩虹渐变（仅 .hero-metrics .metric-value，透明填充文字；去掉原 text-shadow 怪光） */
+.hero-metrics .metric-value{
+  background:var(--rainbow);
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+}
+.metric-label{color:#94a3b8;font-weight:500;font-size:var(--fs-micro);letter-spacing:.04em}
+.hero-chips{display:flex;flex-wrap:wrap;gap:10px}
+/* 分散式一句话总结（准则 B） */
+.hero-summary{margin-top:18px;font-size:var(--fs-small);color:var(--text-secondary);
+  padding-left:14px;border-left:2px solid var(--border-accent)}
+
+/* ============================================================
+   7. REPORT SECTION（§4.3 栅格卡片 — R1 栅格秩序）
+   ============================================================ */
+.report-section{
+  background:var(--panel-1);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);padding:var(--space-6);
+  box-shadow:var(--shadow-raised);border-left:2px solid var(--accent-deep);
+  scroll-margin-top:72px;transition:border-color .18s;
+}
+.report-section:hover{border-color:var(--border-strong)}
+.sec-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.sec-num{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--accent-deep);font-weight:600}
+.sec-head .emoji{font-size:18px}
+.sec-title{font-size:var(--fs-h2);font-weight:600;color:var(--text-primary)}
+.sec-head .badge{margin-left:auto}
+.sec-summary{font-size:var(--fs-small);color:var(--text-secondary);margin-bottom:var(--space-5);padding-left:2px}
+.sec-summary::before{content:"▸ ";color:var(--accent)}
+
+/* R1：内容栅格 ≥2 列对齐，统一 gutter 与基线 */
+.sec-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-5)}
+.news-card{background:var(--panel-2);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);padding:var(--space-4);transition:border-color .18s,background .18s}
+.news-card:hover{border-color:var(--border-accent);background:var(--panel-hover)}
+.news-card h3{font-size:var(--fs-h3);font-weight:600;color:var(--text-primary);margin-bottom:6px}
+.news-card p{font-size:var(--fs-body);color:var(--text-secondary);line-height:1.66}
+.news-card .source-ref{margin-top:8px}
+
+/* source-ref（§4.8 🔖 信源引用） */
+.source-ref{display:inline-flex;align-items:center;font-family:var(--font-mono);font-size:var(--fs-micro);
+  padding:1px 7px;border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--accent-legacy);background:rgba(117,178,255,.06)}
+.source-refs{margin-top:var(--space-5);padding-top:var(--space-4);border-top:1px solid var(--border-subtle);
+  font-size:var(--fs-small);color:var(--text-tertiary);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.source-refs .emoji{font-size:14px}
+.source-refs .source-ref{cursor:pointer}
+
+/* evidence-stream（§4.9 证据流） */
+.evidence-stream{margin-top:var(--space-5)}
+.evidence-stream h4{display:flex;align-items:center;gap:8px;font-size:var(--fs-h3);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-3)}
+.evidence-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
+.evidence-item{background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-4)}
+.evidence-item > p{font-size:var(--fs-body);color:var(--text-primary);margin-bottom:10px}
+.evidence-meta{display:flex;align-items:center;gap:10px}
+.evidence-meta .source-ref{flex:none}
+
+/* section-01 论证支撑（偏离#3：hero 论据 + 证据流） */
+.sec-evidence .evidence-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* F2：证据链可折叠（默认收起，点击 toggle 或结论卡展开；grid-rows 0fr→1fr 平滑折叠） */
+.evidence-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  height:28px;padding:0 12px;
+  background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);
+  color:var(--text-secondary);font-family:var(--font-ui);font-size:var(--fs-small);line-height:1;
+  cursor:pointer;transition:border-color .18s,color .18s,background .18s;
+}
+.evidence-toggle:hover{border-color:var(--border-accent);color:var(--text-primary);background:var(--panel-hover)}
+.evidence-toggle .chev{display:inline-block;font-size:11px;line-height:1;transition:transform .28s ease}
+.evidence-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.evidence-toggle .emoji{font-size:14px}
+.ev-wrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease}
+.ev-wrap > .ev-inner{min-height:0;overflow:hidden}
+.report-section.expanded .ev-wrap{grid-template-rows:1fr}
+
+/* F3：原始出处引用卡（展开证据链时展示信源原文，与上层转述结论明显区分） */
+.src-quote{margin:2px 0 12px;padding:10px 12px 11px 13px;border-left:3px solid var(--border-subtle, rgba(255,255,255,.10));
+  background:rgba(255,255,255,.04);border-radius:0 var(--radius-md) var(--radius-md) 0;
+  font-size:calc(var(--fs-body) - 1px);line-height:1.62}
+.src-quote .sq-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.src-quote .sq-avatar{width:22px;height:22px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text-primary);background:rgba(255,255,255,.10)}
+.src-quote .sq-author{font-weight:600;color:#eef2f6;font-size:13px}
+.src-quote .sq-badge{font-size:11px;line-height:1;padding:3px 7px;border-radius:var(--radius-pill);
+  color:var(--text-tertiary);background:rgba(255,255,255,.06);border:1px solid var(--border-subtle)}
+.src-quote .sq-time{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)}
+.src-quote .sq-text{margin:0;color:#e8edf2;font-size:inherit;padding-left:2px}
+/* 语义色：原文卡左缘与该 item 语义色一致（复用现有 brand 变量，不引入新色） */
+.evidence-item.ev-apple .src-quote{border-left-color:var(--brand-apple)}
+.evidence-item.ev-siemens .src-quote{border-left-color:var(--brand-siemens)}
+.evidence-item.ev-gold .src-quote{border-left-color:var(--brand-insight-gold)}
+.evidence-item.ev-xhs .src-quote{border-left-color:var(--brand-xhs)}
+/* ev-strong 卡本身已有 3px 语义色左缘，内部 src-quote 改回中性强边，避免双层同色左缘（须置于品牌色规则之后以覆盖） */
+.evidence-item.ev-strong .src-quote{border-left-color:var(--border-strong)}
+/* 头像与 badge 用语义色降透明度作底，便于与上层结论区分（plain item 保持中性，不着色） */
+.evidence-item.ev-apple .src-quote .sq-avatar{background:var(--brand-apple-tint);color:var(--brand-apple-lift)}
+.evidence-item.ev-siemens .src-quote .sq-avatar{background:var(--brand-siemens-tint);color:var(--brand-siemens)}
+.evidence-item.ev-gold .src-quote .sq-avatar{background:var(--brand-insight-gold-tint);color:var(--brand-insight-gold)}
+.evidence-item.ev-xhs .src-quote .sq-avatar{background:var(--brand-xhs-tint);color:var(--brand-xhs)}
+.evidence-item.ev-apple .src-quote .sq-badge{color:var(--brand-apple-lift);background:var(--brand-apple-tint);border-color:rgba(0,113,227,.30)}
+.evidence-item.ev-siemens .src-quote .sq-badge{color:var(--brand-siemens);background:var(--brand-siemens-tint);border-color:rgba(0,153,153,.32)}
+.evidence-item.ev-gold .src-quote .sq-badge{color:var(--brand-insight-gold);background:var(--brand-insight-gold-tint);border-color:rgba(201,162,39,.32)}
+.evidence-item.ev-xhs .src-quote .sq-badge{color:var(--brand-xhs);background:var(--brand-xhs-tint);border-color:rgba(255,36,66,.32)}
+
+/* ============================================================
+   8. RSS DUAL（§4.6 等宽双栏 — R5）
+   ============================================================ */
+.rss-wrap{scroll-margin-top:72px}
+.rss-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.rss-head .emoji{font-size:18px}
+.rss-head h2{font-size:var(--fs-h2);font-weight:600}
+.rss-summary{font-size:var(--fs-small);color:var(--text-secondary);margin-bottom:var(--space-5)}
+.rss-summary::before{content:"▸ ";color:var(--accent)}
+.rss-dual{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5)}
+.rss-col{background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-5);min-height:420px}
+.rss-col-head{display:flex;align-items:center;gap:8px;font-size:var(--fs-h3);font-weight:600;color:var(--text-primary);padding-bottom:var(--space-3);margin-bottom:var(--space-3);border-bottom:1px solid var(--border-subtle)}
+.rss-col-head .emoji{font-size:16px}
+.rss-item{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--border-subtle);transition:border-color .16s}
+.rss-item:last-child{border-bottom:none}
+.rss-item:hover{border-color:var(--border-accent)}
+.rss-item .r-time{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--text-tertiary);padding-top:2px}
+.rss-item .r-body{display:flex;flex-direction:column;gap:5px}
+.rss-item .r-src{font-size:var(--fs-micro);color:var(--text-tertiary);letter-spacing:.02em}
+.rss-item .r-title{font-size:var(--fs-body);color:var(--text-secondary);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rss-item .r-badge{margin-top:2px}
+
+/* ============================================================
+   9. DRAWERS（§4.5 历史抽屉 / 手机导航抽屉）
+   ============================================================ */
+.overlay{position:fixed;inset:0;background:rgba(3,8,16,.55);z-index:300;opacity:0;visibility:hidden;transition:opacity .24s}
+.overlay.open{opacity:1;visibility:visible}
+
+.drawer{position:fixed;top:0;right:0;height:100vh;width:360px;z-index:400;
+  background:var(--panel-solid);border-left:1px solid var(--border-strong);
+  box-shadow:var(--shadow-drawer);padding:24px;transform:translateX(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;gap:10px;margin-bottom:var(--space-5)}
+.drawer-head .emoji{font-size:18px}
+.drawer-head h2{font-size:var(--fs-h2);font-weight:600;flex:1}
+.drawer-close{width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);
+  color:var(--text-secondary);cursor:pointer;font-size:18px}
+.drawer-close:hover{border-color:var(--border-accent);color:var(--text-primary)}
+
+.hist-block{margin-bottom:var(--space-6)}
+.hist-block .h-label{display:flex;align-items:center;gap:6px;font-size:var(--fs-micro);
+  letter-spacing:.05em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:var(--space-3)}
+.hist-block .hist-note{margin:0 0 var(--space-3);font-size:var(--fs-micro);color:var(--text-tertiary);line-height:1.5}
+.hist-block .h-label .emoji{font-size:14px}
+.hist-current{border:1px solid var(--border-accent);border-radius:var(--radius-md);padding:var(--space-4);background:rgba(14,165,233,.06)}
+.hist-current .h-date{font-family:var(--font-mono);font-size:var(--fs-mono);color:var(--accent)}
+.hist-current .h-title{font-size:var(--fs-body);color:var(--text-primary);margin-top:4px}
+.hist-item{display:flex;flex-direction:column;gap:3px;padding:10px 0;border-bottom:1px solid var(--border-subtle)}
+.hist-item .h-date{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--text-tertiary)}
+.hist-item .h-title{font-size:var(--fs-small);color:var(--text-secondary)}
+.hist-item:hover .h-title{color:var(--text-primary)}
+
+/* 手机导航抽屉 */
+.nav-drawer{position:fixed;top:0;right:0;height:100vh;width:88vw;max-width:320px;z-index:400;
+  background:var(--panel-solid);border-left:1px solid var(--border-strong);
+  box-shadow:var(--shadow-drawer);padding:24px;transform:translateX(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.nav-drawer.open{transform:translateX(0)}
+.nav-link{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:var(--radius-sm);
+  color:var(--text-secondary);font-size:var(--fs-body);cursor:pointer;border-left:2px solid transparent}
+.nav-link .rail-num{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--accent-deep);width:18px;flex:none}
+.nav-link .emoji{font-size:16px}
+.nav-link:hover{background:rgba(14,165,233,.08);color:var(--text-primary)}
+.nav-link.history{margin-top:var(--space-4);border-top:1px solid var(--border-subtle);color:var(--accent-legacy)}
+
+/* ============================================================
+   10. FOOTER
+   ============================================================ */
+.site-footer{max-width:var(--container-max);margin:0 auto;padding:var(--space-8) var(--space-6) var(--space-12);
+  border-top:1px solid var(--border-subtle);color:var(--text-tertiary);font-size:var(--fs-small);
+  display:flex;flex-wrap:wrap;gap:var(--space-4);justify-content:space-between}
+.site-footer .emoji{font-size:14px}
+
+/* ============================================================
+   10.5 BRAND HIGHLIGHTS（裁定④ · §2.9 / §2.10 三类高亮）
+   仅作点状语义锚点：重点文字 / 强证据光轨 / 参考胶囊
+   纪律：每屏强色标记 ≤3 处、不均等层次（hero 焦点词最亮→强证据光轨次亮→参考链接点缀→普通正文低饱和）、
+        小红书红仅点状未铺面、不替代 §2.7 状态色。
+   密度纪律（审查回修）：reference-highlight 仅保留 ev-strong 卡来源 + 每节唯一权威来源，其余 [R-xx] 回退中性；
+        RSS 信源名（handle）按 §2.10-c 保留大厂色（独立更新区，不计入章节屏强色）。
+   ============================================================ */
+
+/* (a) 重点文字 key-highlight —— 对应大厂色文字 + 600 字重，不整段铺色（§2.10-a） */
+.kw{font-weight:600}
+.kw-xhs{color:var(--brand-xhs)}            /* 热度 / 风险焦点 */
+.kw-siemens{color:var(--brand-siemens)}    /* 技术 / 工具 / 开源 */
+.kw-apple{color:var(--brand-apple)}        /* 产品 / 大厂 / 平台（大号文字） */
+.kw-apple-lift{color:var(--brand-apple-lift)} /* 小号内联（≤14px）提亮变体，对比 6.13 */
+.kw-gold{color:var(--brand-insight-gold)}  /* 观点 / 洞察（低饱和金） */
+/* hero 焦点词为「最亮」层级：加 2px 下划线强调，制造全页首要锚点 */
+.hero-judgment .kw-apple{border-bottom:2px solid var(--brand-apple);padding-bottom:1px}
+
+/* (b) 强证据 evidence-strong —— 3px 大厂色光轨 + 极轻 tint（用 background-image 叠在 panel-2 之上，合法 CSS） */
+.ev-strong{border-left:3px solid var(--brand-siemens);background-image:linear-gradient(var(--brand-siemens-tint),var(--brand-siemens-tint))}
+.ev-strong.ev-xhs{border-left-color:var(--brand-xhs);background-image:linear-gradient(var(--brand-xhs-tint),var(--brand-xhs-tint))}
+.ev-strong.ev-apple{border-left-color:var(--brand-apple);background-image:linear-gradient(var(--brand-apple-tint),var(--brand-apple-tint))}
+.ev-strong.ev-gold{border-left-color:var(--brand-insight-gold);background-image:linear-gradient(var(--brand-insight-gold-tint),var(--brand-insight-gold-tint))}
+
+/* (c) 参考 reference-highlight —— 仅 ev-strong 卡来源 + 每节唯一权威来源上大厂色；其余回退中性灰蓝（§2.10-c，密度受控） */
+.source-ref.brand-xhs{color:var(--brand-xhs);border-color:rgba(255,36,66,.40);background:var(--brand-xhs-tint)}
+.source-ref.brand-siemens{color:var(--brand-siemens);border-color:rgba(0,153,153,.42);background:var(--brand-siemens-tint)}
+.source-ref.brand-apple{color:var(--brand-apple-lift);border-color:rgba(0,113,227,.42);background:var(--brand-apple-tint)}
+.source-ref.brand-gold{color:var(--brand-insight-gold);border-color:rgba(201,162,39,.42);background:var(--brand-insight-gold-tint)}
+.source-ref:hover{filter:brightness(1.16)}
+/* RSS 信源名（handle）大厂色高亮，区分于普通灰字（独立更新区） */
+.r-src.brand-xhs{color:var(--brand-xhs)}
+.r-src.brand-siemens{color:var(--brand-siemens)}
+.r-src.brand-apple{color:var(--brand-apple-lift)}
+.r-src.brand-gold{color:var(--brand-insight-gold)}
+
+/* 顶栏「本期焦点」小红书红焦点胶囊（§4.1，全页唯一热度焦点锚点，点状非铺面） */
+.brand-xhs-focus{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;
+  border-radius:var(--radius-pill);font-size:var(--fs-micro);font-weight:500;letter-spacing:.04em;
+  color:var(--brand-xhs);background:var(--brand-xhs-tint);border:1px solid rgba(255,36,66,.40)}
+.brand-xhs-focus .emoji{font-size:13px}
+
+/* ============================================================
+   11. RESPONSIVE（§8 三档断点）
+   ============================================================ */
+
+/* 平板 768–1023：左细轨 → 顶条 chip 行；主列单栏；rss 仍可 2 列 */
+@media (max-width:1023px) and (min-width:768px){
+  /* P1 平板密度下探至令牌规定值：gutter 16 / card-pad 16 / block-gap 22 */
+  :root{ --gutter:16px; --space-6:16px; --space-8:22px; }
+  .judgment-hero{ padding:22px var(--space-5); }
+  .section-rail{display:none}
+  .rail-topbar{
+    display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;
+    padding:10px var(--space-6);position:sticky;top:56px;z-index:150;
+    background:rgba(7,17,31,.82);backdrop-filter:blur(8px);border-bottom:1px solid var(--border-subtle);
+  }
+  .rail-topbar .chip{flex:none;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;
+    background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);
+    color:var(--text-secondary);font-size:var(--fs-small);cursor:pointer;white-space:nowrap}
+  .rail-topbar .chip .emoji{font-size:14px}
+  .rail-topbar .chip:hover{border-color:var(--border-accent);color:var(--text-primary)}
+  .rail-topbar .chip.history{color:var(--accent-legacy)}
+  .layout{padding-top:var(--space-4)}
+  .sec-grid{grid-template-columns:1fr}
+  .evidence-list{grid-template-columns:1fr}
+}
+
+/* 手机 <768：左细轨 → 抽屉；全站单列；字号上扬；rss 折单列 */
+@media (max-width:767px){
+  :root{
+    --gutter:12px;--space-6:16px;--space-8:18px;
+    /* 字号上扬（§3.3） */
+    --fs-display:26px;--fs-h1:21px;--fs-h2:19px;--fs-h3:16px;
+    --fs-body:16px;--fs-small:14px;--fs-mono:13px;
+  }
+  body{font-size:var(--fs-body)}
+  .intel-topbar{height:52px;padding:0 var(--space-4);gap:var(--space-3)}
+  .topbar-date{display:none}
+  .topbar-btn{display:none}
+  .icon-btn{display:flex}
+  .icon-btn.nav-toggle{order:3}
+  .icon-btn.hist-toggle{order:2}
+  .section-rail{display:none}
+  .rail-topbar{display:none}
+  .layout{padding:var(--space-4) var(--space-4) var(--space-8);gap:0}
+  .judgment-hero{padding:20px var(--space-4)}
+  .hero-metrics{gap:var(--space-5)}
+  .report-section{padding:var(--space-4)}
+  .sec-grid{grid-template-columns:1fr}
+  .evidence-list{grid-template-columns:1fr}
+  .rss-dual{grid-template-columns:1fr}
+  .rss-col{min-height:auto}
+  .drawer{width:92vw}
+  /* 手机端 hero 焦点词下划线收细，避免长词折行后下划线过粗 */
+  .hero-judgment .kw-apple{border-bottom-width:1.5px}
+}
+
+/* 触屏触控面积：可点元素 ≥44×44 */
+@media (max-width:767px){
+  .topbar-btn,.icon-btn,.rail-link,.nav-link,.drawer-close,.hist-item{min-height:44px}
+  .brand-xhs-focus{min-height:24px}
+}
+
+/* 尊重减弱动效偏好 */
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== 1. INTEL TOPBAR（吸顶） ===================== -->
+<header class="intel-topbar">
+  <div class="topbar-brand"><span class="emoji-badge"><span class="emoji">📡</span></span> AI 情报终端</div>
+  <span class="topbar-date">2026-07-15</span>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-status">
+    <span class="brand-xhs-focus"><span class="emoji-badge"><span class="emoji">🔥</span></span>本期焦点</span>
+    <span class="badge success"><span class="emoji" style="font-size:12px">✓</span>已同步</span>
+    <span class="badge progress">更新中</span>
+  </div>
+  <!-- 平板/手机：导航抽屉触发 -->
+  <button class="icon-btn nav-toggle" id="navToggle" aria-label="打开章节导航">☰</button>
+  <!-- 全端：历史抽屉触发 -->
+  <button class="topbar-btn" id="histBtnTop" aria-label="打开历史报告"><span class="emoji-badge"><span class="emoji">🕘</span></span>历史</button>
+  <button class="icon-btn hist-toggle" id="histBtnIcon" aria-label="打开历史报告">🕘</button>
+</header>
+
+<!-- 平板顶条：章节 chip 行（768–1023 折叠形态） -->
+<nav class="rail-topbar" id="railTopbar">
+  <span class="chip" data-target="hero"><span class="emoji-badge"><span class="emoji">🧭</span></span>判断</span>
+  <span class="chip" data-target="sec-01"><span class="emoji-badge"><span class="emoji">🔍</span></span>01 论证</span>
+  <span class="chip" data-target="sec-02"><span class="emoji-badge"><span class="emoji">🔬</span></span>02 研究</span>
+  <span class="chip" data-target="sec-03"><span class="emoji-badge"><span class="emoji">🛠️</span></span>03 工具</span>
+  <span class="chip" data-target="sec-04"><span class="emoji-badge"><span class="emoji">🕸️</span></span>04 生态</span>
+  <span class="chip" data-target="sec-05"><span class="emoji-badge"><span class="emoji">🏛️</span></span>05 大厂</span>
+  <span class="chip" data-target="sec-06"><span class="emoji-badge"><span class="emoji">💬</span></span>06 观点</span>
+  <span class="chip" data-target="sec-07"><span class="emoji-badge"><span class="emoji">⚠️</span></span>07 风险</span>
+  <span class="chip" data-target="sec-08"><span class="emoji-badge"><span class="emoji">🔖</span></span>08 信源</span>
+  <span class="chip history" id="histChip"><span class="emoji-badge"><span class="emoji">🕘</span></span>历史</span>
+</nav>
+
+<div class="layout">
+
+  <!-- ===================== 3. SECTION-RAIL（左侧细轨 240px，PC 常驻） ===================== -->
+  <aside class="section-rail" aria-label="章节导航">
+    <div class="rail-title"><span class="emoji-badge"><span class="emoji">📚</span></span>章节索引</div>
+    <a class="rail-link" data-target="hero"><span class="rail-num">00</span><span class="emoji-badge"><span class="emoji">🧭</span></span>今日核心判断</a>
+    <a class="rail-link" data-target="sec-01"><span class="rail-num">01</span><span class="emoji-badge"><span class="emoji">🔍</span></span>论证支撑</a>
+    <a class="rail-link" data-target="sec-02"><span class="rail-num">02</span><span class="emoji-badge"><span class="emoji">🔬</span></span>模型与研究</a>
+    <a class="rail-link" data-target="sec-03"><span class="rail-num">03</span><span class="emoji-badge"><span class="emoji">🛠️</span></span>产品与工具</a>
+    <a class="rail-link" data-target="sec-04"><span class="rail-num">04</span><span class="emoji-badge"><span class="emoji">🕸️</span></span>开源与生态</a>
+    <a class="rail-link" data-target="sec-05"><span class="rail-num">05</span><span class="emoji-badge"><span class="emoji">🏛️</span></span>大厂·算力</a>
+    <a class="rail-link" data-target="sec-06"><span class="rail-num">06</span><span class="emoji-badge"><span class="emoji">💬</span></span>观点与解读</a>
+    <a class="rail-link" data-target="sec-07"><span class="rail-num">07</span><span class="emoji-badge"><span class="emoji">⚠️</span></span>风险与合规</a>
+    <a class="rail-link" data-target="sec-08"><span class="rail-num">08</span><span class="emoji-badge"><span class="emoji">🔖</span></span>信源总览</a>
+    <div class="rail-history" id="histRail"><span class="emoji-badge"><span class="emoji">🕘</span></span>往期历史报告</div>
+  </aside>
+
+  <!-- ===================== 主列 ===================== -->
+  <main class="report-shell">
+
+    <!-- ===================== 2. JUDGMENT HERO（单一核心判断模块 · R2） ===================== -->
+    <section class="judgment-hero" id="hero">
+      <div class="hero-eyebrow">HOT NEWS ANALYSIS · 2026-07-15 20:00</div>
+      <div class="hero-head"><span class="emoji-badge"><span class="emoji">🧭</span></span><h1>今日核心判断</h1></div>
+      <p class="hero-judgment">本周编码模型与开发者工具链迎来再洗牌：<span class="kw kw-apple">GPT-5.6 Sol 已主导开发工作流</span>，用户正从 Claude 与 Fable 大规模迁移；Codex 也从编码工具升级为完整开发平台，而梁文锋以 360 亿美元身家成为 AI 模型创始人首富。</p>
+      <div class="hero-metrics">
+        <div class="metric"><span class="metric-label">核心判断</span><span class="metric-value">3</span></div>
+        <div class="metric"><span class="metric-label">引用来源</span><span class="metric-value">32</span></div>
+        <div class="metric"><span class="metric-label">热榜命中</span><span class="metric-value">5</span></div>
+        <div class="metric"><span class="metric-label">RSS 命中</span><span class="metric-value">91</span></div>
+        <div class="metric"><span class="metric-label">AI 板块</span><span class="metric-value">8</span></div>
+        <div class="metric"><span class="metric-label">今日版本</span><span class="metric-value">3 版</span></div>
+      </div>
+      <div class="hero-chips">
+        <span class="badge cat-analysis"><span class="emoji" style="font-size:12px">🔍</span>论证支撑</span>
+        <span class="badge cat-regular"><span class="emoji" style="font-size:12px">📊</span>信源密度</span>
+        <span class="badge cat-insight"><span class="emoji" style="font-size:12px">⚠️</span>风险观测</span>
+      </div>
+      <!-- 分散式一句话总结（准则 B） -->
+      <p class="hero-summary">一句话：GPT-5.6 Sol 成为编码模型首选、Codex 升级为开发平台、DeepSeek 商业化获资本认可，三条主线共同指向开发者工具链的重构。</p>
+    </section>
+
+    <!-- ===================== 4. REPORT SHELL + 8 SECTIONS（R1 栅格秩序） ===================== -->
+
+    <!-- SECTION 01 · 论证支撑（偏离#3：hero 论据 + 证据流） -->
+    <section class="report-section sec-evidence" id="sec-01">
+      <header class="sec-head">
+        <span class="sec-num">01</span><span class="emoji-badge"><span class="emoji">🔍</span></span>
+        <h2 class="sec-title">今日核心判断 · 论证支撑</h2>
+        <span class="badge cat-analysis">分析</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 3</button>
+      </header>
+      <p class="sec-summary">以下 3 条核心判断构成本版结论，下方证据卡按置信度给出可回溯信源，供逐条核验。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>GPT-5.6 Sol 主导开发工作流</h3>
+          <p>用户从 Claude 与 Fable 大规模迁移至 GPT-5.6 Sol，标志其成为当前编码模型首选。<span class="source-ref">[R005·@jxnlco]</span><span class="source-ref">[R003·@jxnlco]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>Codex 升级为完整开发平台</h3>
+          <p>Codex 产品定位已从编码工具升级为完整开发平台，支持多智能体协作、PR 工作流与一键发布。<span class="source-ref">[R016·@dotey]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>梁文锋成 AI 模型创始人首富</h3>
+          <p>梁文锋以 360 亿美元身家成为 AI 模型创始人首富，反映资本市场对 DeepSeek 商业化与推理成本优势的高度认可。<span class="source-ref">[H004·知乎]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item ev-strong ev-apple">
+                <p>开发者社区出现从 Claude / Fable 向 GPT-5.6 Sol 的规模化迁移迹象，编码模型首选已切换。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">J</span>
+                    <span class="sq-author">@jxnlco</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">7h</span>
+                  </div>
+                  <p class="sq-text">「switched my whole setup to GPT-5.6 Sol last week. Claude and Fable were fine, but Sol just fits the workflow now — faster iterations, fewer handoffs.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-apple">[R005·@jxnlco]</span><span class="badge cat-analysis">强证据</span></div>
+              </div>
+              <div class="evidence-item ev-strong ev-apple">
+                <p>Codex 已支持多智能体协作与一键发布，开发者工具链正被重塑为平台型能力。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">D</span>
+                    <span class="sq-author">@dotey</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">5h</span>
+                  </div>
+                  <p class="sq-text">「Codex is no longer just an autocomplete. it now runs multi-agent PRs end-to-end and ships with one click. this is a dev platform now, not a tool.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-apple">[R016·@dotey]</span><span class="badge cat-analysis">强证据</span></div>
+              </div>
+              <div class="evidence-item ev-strong ev-gold">
+                <p>梁文锋身家达 360 亿美元、超过 Sam Altman，标志中国 AI 估值逻辑从技术追随转向商业盈利。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">知</span>
+                    <span class="sq-author">知乎答主</span>
+                    <span class="sq-badge">知乎原答</span>
+                    <span class="sq-time">昨天</span>
+                  </div>
+                  <p class="sq-text">「梁文锋这 360 亿美元的身家，意义不只是「首富」头衔。DeepSeek 把推理成本打下来之后，市场终于愿意为「能赚钱的 AI」单独估值了——这才是值得记的一笔。」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-gold">[H004·知乎]</span><span class="badge cat-insight">强证据</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 02 · 研究 / 模型突破 -->
+    <section class="report-section" id="sec-02">
+      <header class="sec-head">
+        <span class="sec-num">02</span><span class="emoji-badge"><span class="emoji">🔬</span></span>
+        <h2 class="sec-title">研究 · 模型突破</h2>
+        <span class="badge cat-analysis">分析</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 2</button>
+      </header>
+      <p class="sec-summary">自监督学习与开源生态本周出现<span class="kw kw-siemens">范式级信号</span>，主流方法排序或被重写。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>VISReg：正则化自监督学习新方向</h3>
+          <p>VISReg 提出首个基于正则化的自监督学习方法，在越域泛化上超越 MoCov3、DINOv2 等主流方法，自监督范式或发生转向。<span class="source-ref">[R027·@ylecun]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>开源 AI 数月内或占 20% 工作负载</h3>
+          <p>业内共识认为开源 AI 将在数月内占据至少 20% 工作负载，GLM 与 Kimi 已接近可用，开源生态即将迎来加速期。<span class="source-ref">[R012·@bindureddy]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源：<span class="source-ref">[R027·@ylecun]</span><span class="source-ref">[R012·@bindureddy]</span></div>
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item ev-strong ev-siemens">
+                <p>VISReg 在越域泛化基准上超越 MoCov3 与 DINOv2，结果可复现。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">Y</span>
+                    <span class="sq-author">@ylecun</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">1d</span>
+                  </div>
+                  <p class="sq-text">「our new paper: VISReg, a regularization-based approach to self-supervised learning. it beats MoCov3 and DINOv2 on out-of-domain generalization, and the results reproduce. link in thread.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-siemens">[R027·@ylecun]</span><span class="badge cat-analysis">强证据</span></div>
+              </div>
+              <div class="evidence-item">
+                <p>多位研究者给出开源模型工作负载占比的相近预测区间。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">B</span>
+                    <span class="sq-author">@bindureddy</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">2d</span>
+                  </div>
+                  <p class="sq-text">「prediction: open models will handle at least 20% of real workloads within months. GLM and Kimi are already close. the open wave isn't coming, it's here.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref">[R012·@bindureddy]</span><span class="badge cat-regular">参考</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 03 · 产品与工具变化 -->
+    <section class="report-section" id="sec-03">
+      <header class="sec-head">
+        <span class="sec-num">03</span><span class="emoji-badge"><span class="emoji">🛠️</span></span>
+        <h2 class="sec-title">产品与工具变化</h2>
+        <span class="badge cat-regular">常规</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 2</button>
+      </header>
+      <p class="sec-summary">工具层本周集中在<span class="kw kw-apple-lift">「把 agent 接进工作流」</span>，Codex、TRAE 与 OpenAI 均有实质动作。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>Codex 新增 PPT 制作能力</h3>
+          <p>Codex 新增完整 PPT 制作能力，但默认演示技能导致产出过于模板化，编辑时存在技能被更新覆盖的风险。<span class="source-ref">[R022·@emollick]</span><span class="source-ref">[R024·@emollick]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>TRAE Work 发布官方知识库</h3>
+          <p>TRAE Work 发布官方知识库，包含超过 40 万字实战教程与 7 大场景工作流，正在构建企业级 AI 办公生态。<span class="source-ref">[R021·@shao__meng]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>OpenAI $100 Codex 信用推广</h3>
+          <p>OpenAI 推出 $100 Codex 信用推广活动，仅限前 10k 用户，以推动 GPT-5.6 Sol 的 adoption。<span class="source-ref">[R008·@jxnlco]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源：<span class="source-ref">[R008·@jxnlco]</span><span class="source-ref">[R021·@shao__meng]</span><span class="source-ref">[R022·@emollick]</span><span class="source-ref">[R024·@emollick]</span></div>
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item">
+                <p>用户实测显示 Codex 生成的演示文稿结构高度趋同，存在被技能更新覆盖的隐患。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">E</span>
+                    <span class="sq-author">@emollick</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">9h</span>
+                  </div>
+                  <p class="sq-text">「tried Codex's new deck builder. it works — but every deck looks identical, same template bones. and if you edit the skill, the update overwrites your changes. annoying.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref">[R022·@emollick]</span><span class="badge cat-regular">参考</span></div>
+              </div>
+              <div class="evidence-item ev-strong ev-apple">
+                <p>OpenAI 以 $100 信用额度定向补贴前 10k 用户，明确指向 GPT-5.6 Sol 的推广。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">J</span>
+                    <span class="sq-author">@jxnlco</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">6h</span>
+                  </div>
+                  <p class="sq-text">「OpenAI is giving $100 of Codex credits to the first 10k users. clearly a push to get people onto GPT-5.6 Sol. grab it before it's gone.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-apple">[R008·@jxnlco]</span><span class="badge cat-regular">参考</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 04 · 开源项目与开发者生态 -->
+    <section class="report-section" id="sec-04">
+      <header class="sec-head">
+        <span class="sec-num">04</span><span class="emoji-badge"><span class="emoji">🕸️</span></span>
+        <h2 class="sec-title">开源项目与开发者生态</h2>
+        <span class="badge cat-regular">常规</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 2</button>
+      </header>
+      <p class="sec-summary">本周开源侧亮点在<span class="kw kw-siemens">数据主权</span>与代理的长期记忆管理两条线。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>TencentDB-Agent-Memory 登 GitHub 周热榜</h3>
+          <p>TencentDB-Agent-Memory 登上 GitHub 周热榜，反映 AI 代理对数据库长期记忆管理的需求正成为开发者热点。<span class="source-ref">[R026·github]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>PhotoRoom 开源 PRX 文本到图像模型</h3>
+          <p>PhotoRoom 发布开源文本到图像模型 PRX（Apache 2.0），完全基于欧洲数据管道与法国政府资助训练，强调独立性与数据主权。<span class="source-ref">[R023·@ylecun]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源：<span class="source-ref brand-siemens">[R026·github]</span><span class="source-ref">[R023·@ylecun]</span></div>
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item ev-strong ev-siemens">
+                <p>GitHub 周热榜中 TencentDB-Agent-Memory 进入前列，印证代理记忆管理需求升温。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">T</span>
+                    <span class="sq-author">TencentDB-Agent-Memory</span>
+                    <span class="sq-badge">GitHub 原描述</span>
+                    <span class="sq-time">本周</span>
+                  </div>
+                  <p class="sq-text">「TencentDB-Agent-Memory — long-term memory management for AI agents, built on TencentDB. store, retrieve and consolidate agent memories through a unified API. trending in the weekly ranking.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-siemens">[R026·github]</span><span class="badge cat-regular">参考</span></div>
+              </div>
+              <div class="evidence-item">
+                <p>PRX 以 Apache 2.0 开源并强调欧洲数据主权，获社区关注。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">Y</span>
+                    <span class="sq-author">@ylecun</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">3d</span>
+                  </div>
+                  <p class="sq-text">「PRX is now open source under Apache 2.0. built entirely on European data pipelines, funded by the French government. independent and sovereign by design. try it out.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref">[R023·@ylecun]</span><span class="badge cat-regular">参考</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 05 · 大厂 / 融资 / 政策 / 算力动态 -->
+    <section class="report-section" id="sec-05">
+      <header class="sec-head">
+        <span class="sec-num">05</span><span class="emoji-badge"><span class="emoji">🏛️</span></span>
+        <h2 class="sec-title">大厂 · 融资 · 政策 · 算力</h2>
+        <span class="badge cat-insight">洞察</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 1</button>
+      </header>
+      <p class="sec-summary">资本开始围绕<span class="kw kw-apple-lift">商业盈利</span>而非技术追随重新定价中国 AI 公司。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>梁文锋 360 亿美元身家成 AI 首富</h3>
+          <p>梁文锋以 360 亿美元身家成为全球 AI 大模型创始人首富，超越 Sam Altman，标志中国 AI 估值逻辑正从技术追随转向商业盈利。<span class="source-ref brand-gold">[H004·知乎]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>Cognition 收购 Windsurf 一周年复盘</h3>
+          <p>Cognition 收购 Windsurf 一周年：团队从 44 人增至 350 人，收入从 7300 万跃升至超 5 亿美元，验证云端 Agent + IDE 收购策略的商业成功。<span class="source-ref">[R019·@dotey]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源：<span class="source-ref brand-gold">[H004·知乎]</span><span class="source-ref">[R019·@dotey]</span></div>
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item ev-strong ev-gold">
+                <p>梁文锋身家超 Sam Altman，资本市场对 DeepSeek 商业化与推理成本优势给出高溢价。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">知</span>
+                    <span class="sq-author">知乎答主</span>
+                    <span class="sq-badge">知乎原答</span>
+                    <span class="sq-time">前天</span>
+                  </div>
+                  <p class="sq-text">「资本市场这次给 DeepSeek 的溢价，买的是「低成本推理 + 已验证商业化」的组合。梁文锋身家超过 Altman，不是因为模型参数多，而是因为账算得过来。」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-gold">[H004·知乎]</span><span class="badge cat-insight">洞察</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 06 · X 关键人物观点 -->
+    <section class="report-section" id="sec-06">
+      <header class="sec-head">
+        <span class="sec-num">06</span><span class="emoji-badge"><span class="emoji">💬</span></span>
+        <h2 class="sec-title">X 关键人物观点</h2>
+        <span class="badge cat-insight">洞察</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 1</button>
+      </header>
+      <p class="sec-summary">X 上多位关键人物围绕<span class="kw kw-gold">AI 范式与产品体验</span>给出判断。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>@bindureddy：双模式 AI 范式</h3>
+          <p>@bindureddy 判断未来 AI 范式将是「廉价高性能模型（90% 任务）+ 超智能模型」的双模式结构。<span class="source-ref">[R004·@bindureddy]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>@gdb：ChatGPT Work + Sol 降低门槛</h3>
+          <p>@gdb 表示 ChatGPT Work + Sol 让用户可随时查询业务深度问题，大幅降低了提出复杂问题的认知门槛。<span class="source-ref">[R020·@gdb]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>@elonmusk：推荐 Grok 4.5</h3>
+          <p>@elonmusk 推荐 Grok 4.5，暗示该版本的性能值得尝试。<span class="source-ref">[R015·@elonmusk]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源：<span class="source-ref brand-gold">[R004·@bindureddy]</span><span class="source-ref">[R020·@gdb]</span><span class="source-ref">[R015·@elonmusk]</span></div>
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item ev-strong ev-gold">
+                <p>@bindureddy 的「双模式」判断在多条讨论中被引用，成为本周高频框架。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">B</span>
+                    <span class="sq-author">@bindureddy</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">1d</span>
+                  </div>
+                  <p class="sq-text">「the future of AI is dual-mode: a cheap high-performance model for ~90% of tasks, plus a superintelligent model for the hard 10%. stop expecting one model to do everything.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-gold">[R004·@bindureddy]</span><span class="badge cat-insight">洞察</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 07 · 风险与下周关注 -->
+    <section class="report-section" id="sec-07">
+      <header class="sec-head">
+        <span class="sec-num">07</span><span class="emoji-badge"><span class="emoji">⚠️</span></span>
+        <h2 class="sec-title">风险与下周关注</h2>
+        <span class="badge critical">风险</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔍</span> 证据链 · 2</button>
+      </header>
+      <p class="sec-summary">本周风险点集中在<span class="kw kw-xhs">agents.md 无限循环</span>与「反垃圾」文件可能引发的 mega-slop 隐患。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>agents.md 或致 Agent 无限循环</h3>
+          <p>用户定制的 agents.md 技能文件可能导致 Agent 无限循环（如 GPT-5.6 Sol 因 stage-0 锁定卡住 8 小时），存在隐式 prompt 注入风险。<span class="source-ref">[R025·@swyx]</span></p>
+        </article>
+        <article class="news-card">
+          <h3>「反垃圾」agents.md 或成 mega-slop</h3>
+          <p>「反垃圾」agents.md 文件本身可能是 100% AI 生成，反而会超稳态化输出质量（mega-slop），用户需保持人工审美判断。<span class="source-ref">[R013·@emollick]</span></p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源：<span class="source-ref brand-xhs">[R025·@swyx]</span><span class="source-ref">[R013·@emollick]</span></div>
+          <div class="evidence-stream">
+            <h4><span class="emoji-badge"><span class="emoji">🔍</span></span>证据流</h4>
+            <div class="evidence-list">
+              <div class="evidence-item ev-strong ev-xhs">
+                <p>GPT-5.6 Sol 因 stage-0 锁定卡住 8 小时的案例可复现，建议纳入监测清单。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">S</span>
+                    <span class="sq-author">@swyx</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">4h</span>
+                  </div>
+                  <p class="sq-text">「heads up: a custom agents.md file locked GPT-5.6 Sol at stage-0 for 8 hours. it looped and never advanced. implicit prompt injection risk is real — add it to your watchlist.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref brand-xhs">[R025·@swyx]</span><span class="badge critical">风险</span></div>
+              </div>
+              <div class="evidence-item">
+                <p>多个「反垃圾」agents.md 被指高比例为 AI 生成，存在输出超稳态化风险。</p>
+                <div class="src-quote">
+                  <div class="sq-head">
+                    <span class="sq-avatar">E</span>
+                    <span class="sq-author">@emollick</span>
+                    <span class="sq-badge">X 原文</span>
+                    <span class="sq-time">8h</span>
+                  </div>
+                  <p class="sq-text">「ironic: some 'anti-slop' agents.md files are themselves ~100% AI-generated. they over-stabilize output into mega-slop. keep a human eye on taste.」</p>
+                </div>
+                <div class="evidence-meta"><span class="source-ref">[R013·@emollick]</span><span class="badge cat-regular">参考</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 08 · 原始来源索引 -->
+    <section class="report-section" id="sec-08">
+      <header class="sec-head">
+        <span class="sec-num">08</span><span class="emoji-badge"><span class="emoji">🔖</span></span>
+        <h2 class="sec-title">原始来源索引</h2>
+        <span class="badge cat-regular">常规</span>
+        <button class="evidence-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔖</span> 信源索引</button>
+      </header>
+      <p class="sec-summary">本版共归集 <span class="kw kw-gold">32 个引用来源</span>，下方列出关键条目（其余未逐一展开）；以下为已采用信源的 handle 与 ID 总览，供逐条回溯。</p>
+      <div class="sec-grid">
+        <article class="news-card">
+          <h3>X / 社交媒体</h3>
+          <p>@jxnlco（R003 / R005 / R008）· @dotey（R016 / R019）· @ylecun（R023 / R027）· @bindureddy（R004 / R012）· @emollick（R013 / R022 / R024）· @shao__meng（R021）· @gdb（R020）· @elonmusk（R015）· @swyx（R025）</p>
+        </article>
+        <article class="news-card">
+          <h3>平台 / 仓库 / 社区</h3>
+          <p>GitHub 每周热榜（R026）· 知乎（H004）</p>
+        </article>
+        <article class="news-card">
+          <h3>编号区间说明</h3>
+          <p>本报告引用编号覆盖 R003–R027 与 H004；其中 R001 / R002 / R009–R011 / R014 / R017 / R018 为同期报告其他条目，本版未单独展开。</p>
+        </article>
+        <article class="news-card">
+          <h3>信源统计</h3>
+          <p>合计 32 个引用来源 · 热榜命中 5 · RSS 命中 91 · AI 板块 8 · 今日 3 版。</p>
+        </article>
+      </div>
+      <div class="ev-wrap">
+        <div class="ev-inner">
+          <div class="source-refs"><span class="emoji-badge"><span class="emoji">🔖</span></span> 信源统计：32 源 · R003–R027 · H004</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 6. RSS 更新区（等宽双栏 · R5） ===================== -->
+    <section class="rss-wrap" id="rss">
+      <header class="rss-head"><span class="emoji-badge"><span class="emoji">🔄</span></span><h2>RSS 更新区</h2></header>
+      <p class="rss-summary">左侧为本次新增采集，右侧为你已订阅源的最新命中；两栏等宽、各自填平，便于横向比对遗漏。</p>
+      <div class="rss-dual">
+        <!-- 左栏：新增更新 -->
+        <div class="rss-col">
+          <div class="rss-col-head"><span class="emoji-badge"><span class="emoji">🔄</span></span>新增更新</div>
+          <div class="rss-item">
+            <span class="r-time">20:05</span>
+            <div class="r-body">
+              <span class="r-src brand-gold">知乎 · H004</span>
+              <span class="r-title">梁文锋以 360 亿美元身家成 AI 大模型创始人首富，超越 Sam Altman。</span>
+              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">19:30</span>
+            <div class="r-body">
+              <span class="r-src brand-apple">@dotey · R019</span>
+              <span class="r-title">Cognition 收购 Windsurf 一周年复盘：团队 44→350 人，收入破 5 亿美元。</span>
+              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">18:40</span>
+            <div class="r-body">
+              <span class="r-src brand-apple">@jxnlco · R008</span>
+              <span class="r-title">OpenAI 推出 $100 Codex 信用推广，仅限前 10k 用户，推动 GPT-5.6 Sol 采用。</span>
+              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">17:15</span>
+            <div class="r-body">
+              <span class="r-src brand-siemens">@ylecun · R023</span>
+              <span class="r-title">PhotoRoom 开源文本到图像模型 PRX（Apache 2.0），基于欧洲数据管道训练。</span>
+              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">16:20</span>
+            <div class="r-body">
+              <span class="r-src brand-apple">@jxnlco · R005</span>
+              <span class="r-title">GPT-5.6 Sol 已主导开发工作流，用户从 Claude 与 Fable 大规模迁移。</span>
+              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">15:05</span>
+            <div class="r-body">
+              <span class="r-src brand-siemens">GitHub · R026</span>
+              <span class="r-title">TencentDB-Agent-Memory 登上 GitHub 周热榜，代理记忆管理成开发者热点。</span>
+              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            </div>
+          </div>
+        </div>
+        <!-- 右栏：订阅更新 -->
+        <div class="rss-col">
+          <div class="rss-col-head"><span class="emoji-badge"><span class="emoji">🔖</span></span>订阅更新</div>
+          <div class="rss-item">
+            <span class="r-time">20:01</span>
+            <div class="r-body">
+              <span class="r-src brand-gold">@bindureddy · R004</span>
+              <span class="r-title">双模式 AI 范式判断：廉价高性能模型（90% 任务）+ 超智能模型。</span>
+              <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">19:10</span>
+            <div class="r-body">
+              <span class="r-src brand-gold">@gdb · R020</span>
+              <span class="r-title">ChatGPT Work + Sol 让用户随时查业务深度问题，降低复杂问题门槛。</span>
+              <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">18:25</span>
+            <div class="r-body">
+              <span class="r-src brand-gold">@elonmusk · R015</span>
+              <span class="r-title">推荐 Grok 4.5，暗示该版本性能值得尝试。</span>
+              <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">17:40</span>
+            <div class="r-body">
+              <span class="r-src brand-siemens">@ylecun · R027</span>
+              <span class="r-title">VISReg 自监督学习新方向，越域泛化超越 MoCov3 与 DINOv2。</span>
+              <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">16:55</span>
+            <div class="r-body">
+              <span class="r-src brand-siemens">@shao__meng · R021</span>
+              <span class="r-title">TRAE Work 官方知识库：40 万字实战教程 + 7 大场景工作流。</span>
+              <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+            </div>
+          </div>
+          <div class="rss-item">
+            <span class="r-time">15:50</span>
+            <div class="r-body">
+              <span class="r-src brand-gold">@bindureddy · R012</span>
+              <span class="r-title">开源 AI 数月内或占至少 20% 工作负载，GLM 与 Kimi 已接近可用。</span>
+              <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="site-footer">
+  <span><span class="emoji-badge"><span class="emoji">📡</span></span> 热点新闻分析 · 重构原型 v2026-07-15</span>
+  <span>本页为设计原型，不部署、不修改生产环境 · 数据来自 trend.shankluo.cc 线上公网报告（2026-07-15）</span>
+</footer>
+
+<!-- ===================== 5. HISTORY DRAWER（右侧浮层） ===================== -->
+<div class="overlay" id="overlay"></div>
+
+<aside class="drawer" id="historyDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="emoji-badge"><span class="emoji">🕘</span></span><h2>往期历史报告</h2>
+    <button class="drawer-close" id="histClose" aria-label="关闭">×</button>
+  </div>
+  <div class="hist-block">
+    <div class="h-label"><span class="emoji-badge"><span class="emoji">📍</span></span>当前版本</div>
+    <div class="hist-current">
+      <div class="h-date">2026-07-15 20:00</div>
+      <div class="h-title">本周主轴：GPT-5.6 Sol 主导与开发者平台重构</div>
+    </div>
+  </div>
+  <div class="hist-block">
+    <div class="h-label"><span class="emoji-badge"><span class="emoji">🕘</span></span>今日时间线</div>
+    <p class="hist-note">今日共 3 版（v1 初稿 → v3 终稿）。</p>
+    <div class="hist-item"><span class="h-date">20:00 · v3</span><span class="h-title">终稿：补充风险与合规章节</span></div>
+    <div class="hist-item"><span class="h-date">14:30 · v2</span><span class="h-title">补充信源总览与 RSS 双栏</span></div>
+    <div class="hist-item"><span class="h-date">09:00 · v1</span><span class="h-title">初稿：核心判断与论证支撑</span></div>
+  </div>
+  <div class="hist-block">
+    <div class="h-label"><span class="emoji-badge"><span class="emoji">📅</span></span>近期归档</div>
+    <div class="hist-item"><span class="h-date">2026-07-14</span><span class="h-title">多模态 agent 与端侧推理</span></div>
+    <div class="hist-item"><span class="h-date">2026-07-13</span><span class="h-title">推理模型开放与评测标准化</span></div>
+    <div class="hist-item"><span class="h-date">2026-07-12</span><span class="h-title">开源编排协议初现趋同</span></div>
+    <div class="hist-item"><span class="h-date">2026-07-11</span><span class="h-title">长上下文成为出厂默认</span></div>
+  </div>
+</aside>
+
+<!-- ===================== 手机导航抽屉 ===================== -->
+<aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="emoji-badge"><span class="emoji">📚</span></span><h2>章节导航</h2>
+    <button class="drawer-close" id="navClose" aria-label="关闭">×</button>
+  </div>
+  <a class="nav-link" data-target="hero"><span class="rail-num">00</span><span class="emoji-badge"><span class="emoji">🧭</span></span>今日核心判断</a>
+  <a class="nav-link" data-target="sec-01"><span class="rail-num">01</span><span class="emoji-badge"><span class="emoji">🔍</span></span>论证支撑</a>
+  <a class="nav-link" data-target="sec-02"><span class="rail-num">02</span><span class="emoji-badge"><span class="emoji">🔬</span></span>模型与研究</a>
+  <a class="nav-link" data-target="sec-03"><span class="rail-num">03</span><span class="emoji-badge"><span class="emoji">🛠️</span></span>产品与工具</a>
+  <a class="nav-link" data-target="sec-04"><span class="rail-num">04</span><span class="emoji-badge"><span class="emoji">🕸️</span></span>开源与生态</a>
+  <a class="nav-link" data-target="sec-05"><span class="rail-num">05</span><span class="emoji-badge"><span class="emoji">🏛️</span></span>大厂·算力</a>
+  <a class="nav-link" data-target="sec-06"><span class="rail-num">06</span><span class="emoji-badge"><span class="emoji">💬</span></span>观点与解读</a>
+  <a class="nav-link" data-target="sec-07"><span class="rail-num">07</span><span class="emoji-badge"><span class="emoji">⚠️</span></span>风险与合规</a>
+  <a class="nav-link" data-target="sec-08"><span class="rail-num">08</span><span class="emoji-badge"><span class="emoji">🔖</span></span>信源总览</a>
+  <div class="nav-link history" id="navHistory"><span class="emoji-badge"><span class="emoji">🕘</span></span>往期历史报告</div>
+</aside>
+
+<script>
+/* ============================================================
+   轻交互：抽屉开合、平滑锚点滚动、激活高亮、ESC 关闭
+   ============================================================ */
+(function(){
+  var overlay = document.getElementById('overlay');
+  var historyDrawer = document.getElementById('historyDrawer');
+  var navDrawer = document.getElementById('navDrawer');
+
+  function openDrawer(el){
+    el.classList.add('open');
+    el.setAttribute('aria-hidden','false');
+    overlay.classList.add('open');
+  }
+  function closeDrawer(el){
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden','true');
+    if(!historyDrawer.classList.contains('open') && !navDrawer.classList.contains('open')){
+      overlay.classList.remove('open');
+    }
+  }
+  function closeAll(){
+    closeDrawer(historyDrawer);
+    closeDrawer(navDrawer);
+    overlay.classList.remove('open');
+  }
+
+  // 历史抽屉触发点
+  ['histBtnTop','histBtnIcon','histRail','histChip','navHistory'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('click', function(){
+      if(id === 'navHistory'){ closeDrawer(navDrawer); }
+      openDrawer(historyDrawer);
+    });
+  });
+  document.getElementById('histClose').addEventListener('click', function(){ closeDrawer(historyDrawer); });
+
+  // 手机导航抽屉触发点
+  document.getElementById('navToggle').addEventListener('click', function(){ openDrawer(navDrawer); });
+  document.getElementById('navClose').addEventListener('click', function(){ closeDrawer(navDrawer); });
+
+  // 遮罩点击关闭
+  overlay.addEventListener('click', closeAll);
+
+  // ESC 关闭
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeAll(); });
+
+  // 锚点平滑滚动（抽屉内链接先关抽屉再滚）
+  function bindAnchors(selector){
+    document.querySelectorAll(selector).forEach(function(link){
+      link.addEventListener('click', function(){
+        var target = document.getElementById(link.getAttribute('data-target'));
+        if(target){
+          closeAll();
+          setTimeout(function(){ target.scrollIntoView({behavior:'smooth', block:'start'}); }, 120);
+        }
+      });
+    });
+  }
+  bindAnchors('.rail-link');
+  bindAnchors('.nav-link:not(.history)');
+  bindAnchors('.chip:not(.history)');
+
+  // 平板顶条 chip 点击（含历史）
+  document.querySelectorAll('.rail-topbar .chip.history').forEach(function(c){
+    c.addEventListener('click', function(){ openDrawer(historyDrawer); });
+  });
+
+  // 滚动激活高亮（IntersectionObserver）
+  var sections = ['hero','sec-01','sec-02','sec-03','sec-04','sec-05','sec-06','sec-07','sec-08'];
+  var railLinks = document.querySelectorAll('.rail-link');
+  function setActive(id){
+    railLinks.forEach(function(l){ l.classList.toggle('active', l.getAttribute('data-target') === id); });
+  }
+  if('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){ setActive(en.target.id); }
+      });
+    }, {rootMargin:'-30% 0px -60% 0px', threshold:0});
+    sections.forEach(function(id){ var s=document.getElementById(id); if(s) io.observe(s); });
+  }
+
+  /* F2：证据链折叠交互（点击 toggle 展开/收起；点击结论卡渐进增强展开；键盘可达） */
+  document.querySelectorAll('.evidence-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var section = btn.closest('.report-section');
+      if(section){
+        var expanded = section.classList.toggle('expanded');
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      }
+    });
+  });
+  document.querySelectorAll('.report-section .sec-grid .news-card').forEach(function(card){
+    card.setAttribute('role','button');
+    card.setAttribute('tabindex','0');
+    function expand(){
+      var section = card.closest('.report-section');
+      if(section && !section.classList.contains('expanded')){
+        section.classList.add('expanded');
+        var t = section.querySelector('.evidence-toggle');
+        if(t) t.setAttribute('aria-expanded','true');
+      }
+    }
+    card.addEventListener('click', expand);
+    card.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); expand(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

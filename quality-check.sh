@@ -54,6 +54,10 @@ echo "[5/6] NAS 部署模板"
 for f in deploy/nas/docker-compose.yml deploy/nas/.env.example deploy/nas/nginx.conf deploy/nas/README.md; do
   check "$f 非空且可读" test -s "$f"
 done
+check "deploy/nas/proxy/config.example.yaml 非空"   test -s deploy/nas/proxy/config.example.yaml
+check "代理模板含 nitter.net 规则"                  grep -q 'DOMAIN,nitter.net,NITTER' deploy/nas/proxy/config.example.yaml
+check "代理模板含 MATCH,DIRECT 规则"                grep -q 'MATCH,DIRECT' deploy/nas/proxy/config.example.yaml
+check "代理模板仅含占位订阅 URL"                    grep -q 'REPLACE_WITH_YOUR_CLASH_SUBSCRIPTION_URL' deploy/nas/proxy/config.example.yaml
 check "deploy/nas/build-bundle.sh 存在且可执行"     test -x deploy/nas/build-bundle.sh
 check "deploy/nas/test-deployment.sh 存在且可执行"  test -x deploy/nas/test-deployment.sh
 check "NAS 部署模板静态检查通过"                    bash deploy/nas/test-deployment.sh --static

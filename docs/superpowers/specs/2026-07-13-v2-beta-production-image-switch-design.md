@@ -8,7 +8,7 @@
 
 成功标准不是“新容器能启动”，而是以下证据同时成立：
 
-1. NAS 导入后的镜像身份与 Gate 9.1 完全一致。
+1. NAS 导入后的镜像与 Gate 9.1 冻结值内容等价：传输 tar SHA-256 一致、RootFS DiffID chain（14 层）全等、平台/Created/Entrypoint/WorkingDir 一致；运行侧 Config ID 以 NAS `docker load` 后的值为准（跨引擎序列化会使 Config digest 重算，详见 §二身份等价裁定）。
 2. 生产切换只改变 `.env` 的 `TRENDRADAR_IMAGE` 一行和 Nginx 两个精确 location，只重建 `trendradar` 与 `report-web`。
 3. 旧日报、旧快照和 SQLite 数据不被覆盖或迁移。
 4. 一次经批准的生产采集完成热榜、RSS、翻译、AI 分析和 v2-beta 历史功能验证。
@@ -23,13 +23,18 @@
 | Docker 构建兼容性提交 | `5c02c6ce` |
 | Gate 9.1 最终 HEAD | `61ba393225de1b6d9d165a1dcddc189073f3e2d6` |
 | 本地镜像标签 | `xjiankong-trendradar:v2-beta-rc-20260713` |
-| 本地镜像 ID | `sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f` |
+| 本地镜像 ID（Mac Docker Desktop，构建来源） | `sha256:3c02dceafa861709ce6bbbd0dc2136b5a9b9db0827bf114f280cb1581b87ab4f` |
+| NAS load 后镜像 ID（运行侧断言用此值） | `sha256:c122cdb56076ed3e0342a2c348537d0f9bd4d48ea2955271489049e7147688b9` |
+| RootFS DiffID chain SHA-256（14 层，Mac=NAS） | `8ca4f36b2b5ee7acbff72221b3f9b16a981d6ed81eb7770dc1ea2b45ce735715` |
+| 传输 tar SHA-256 | `be16f6d9f34e43f9e3e12658819705ab001a98ef5e526e54febe07f979cc7dce` |
 | 平台 | `linux/amd64` |
-| 大小 | `138032730` bytes |
+| 大小（Mac 压缩口径 / NAS 展开口径） | `138032730` / `373323120` bytes |
 | Gate 9.1 断言 | `RC_IMPORT_OK`、`RC_CONTAINER_OK`，退出码均为 0 |
 | 已知生产版本 | `xjiankong-trendradar:v2-alpha-20260709`；NAS 实际镜像 ID 须在 Gate 10A 重新读取 |
 
-镜像传输必须使用 `docker save` / `docker load`，不得使用会丢失镜像配置的 `docker export` / `docker import`。传输归档必须记录 SHA-256 和大小，NAS 加载后重新检查镜像 ID、平台和大小。
+镜像传输必须使用 `docker save` / `docker load`，不得使用会丢失镜像配置的 `docker export` / `docker import`。传输归档必须记录 SHA-256 和大小，NAS 加载后重新检查镜像身份。
+
+**身份等价裁定（2026-07-13 老板裁定，2026-07-14 会商落实）：** Mac Docker Desktop 与群晖 Linux Docker 引擎的 Config JSON 序列化方式不同，`docker load` 后 Config digest 会重算，导致 NAS 侧 Config ID 与 Mac 冻结值不同（`c122cdb5...` vs `3c02dce...`）、`docker images` 显示的 Size 口径也不同（展开 vs 压缩）。这属跨引擎正常差异，不构成内容篡改。内容等价以以下三项为准：① 传输 tar SHA-256 一致；② RootFS DiffID chain（14 层）全等（文件系统逐字节相同）；③ 平台/Created/Entrypoint/WorkingDir 一致。运行侧断言（10C）以 NAS load 后的 Config ID `sha256:c122cdb56076...` 为准。可选加固（在 linux/amd64 宿主直接 build 或用 skopeo/crane 同源传输以使 Config ID 也一致）非 10C 前置硬阻塞。
 
 ## 三、变更范围
 
@@ -69,7 +74,7 @@
 
 **禁止：** 修改 `.env`、切换生产容器、付费采集、清理旧文件。
 
-**通过条件：** 新备份完整且权限受限；NAS 归档校验与本地一致；导入镜像身份与冻结输入完全一致；免费断言通过且无残留容器。
+**通过条件：** 新备份完整且权限受限；NAS 归档校验与本地一致；导入镜像与冻结输入内容等价（tar SHA-256 一致 + RootFS DiffID chain 全等 + 平台一致；运行侧 Config ID 以 NAS load 后值为准）；免费断言通过且无残留容器。
 
 ### Gate 10C：镜像切换与免费生产验收
 
@@ -114,7 +119,7 @@
 
 立即停止并回滚：
 
-- 镜像归档校验、NAS 镜像 ID、平台或大小与冻结值不一致。
+- 镜像归档 SHA-256 校验失败，或 NAS 侧 RootFS DiffID chain 与冻结值不一致（Config ID/Size 的跨引擎差异不触发回滚，见 §二身份等价裁定）。
 - NAS 免费容器断言失败或留下未知容器。
 - `trendradar` crash loop、持续重启，或出现 import、权限、配置加载错误。
 - `.env` 除镜像行外、Compose、配置、代理、挂载、网络或输出出现未知漂移。
@@ -151,4 +156,4 @@
 
 **Stop conditions：** 出现未知差异、敏感信息风险、回滚证据不足、校验失败、生产状态与文档不一致或需要扩大变更范围。
 
-**Next Owner：** 老板。设计与逐命令实施计划均已确认；Gate 10A-1 首次只读 SSH 预检连接超时且未建立会话、未读取 NAS、未执行写入。网络恢复后由老板确认从 10A-1 重试，完成 10A 前禁止进入 10B。
+**Next Owner：** 老板 / 后续会商 Agent。Gate 10A、10B 已完成（2026-07-13）；10B 身份裁定为接受 RootFS 等价（详见 `docs/roadmap.md` 与实施计划 10B 节）。**Gate 10C 未执行、未批准。** 会商决议（2026-07-14 老板裁定）：10C 运行侧断言以 NAS load 后 Config ID `sha256:c122cdb56076...` 为准；本文 §二/§四/§六 的「ID/大小必须等于冻结值」已修订为以 tar SHA-256 + RootFS DiffID chain 全等 + 平台一致为内容等价标准；可选加固（skopeo/crane/直接 build）非 10C 前置。**Gate 10C 仍未执行、未批准。** 未获老板「执行 10C」前禁止生产写入。

@@ -5,6 +5,9 @@ services:
     image: ${TRENDRADAR_IMAGE}
     container_name: xjiankong-trendradar
     restart: unless-stopped
+    depends_on:
+      rss-proxy:
+        condition: service_started
     environment:
       TZ: ${TZ:-Asia/Taipei}
       CRON_SCHEDULE: ${CRON_SCHEDULE:-0 */4 * * *}
@@ -18,6 +21,21 @@ services:
     volumes:
       - ${CONFIG_DIR:-./config}:/app/config:ro
       - ${OUTPUT_DIR:-./output}:/app/output
+    networks:
+      - collector
+
+  rss-proxy:
+    image: ${RSS_PROXY_IMAGE}
+    container_name: xjiankong-rss-proxy
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ./proxy/config.yaml:/root/.config/mihomo/config.yaml:ro
+      - ./proxy/data:/root/.config/mihomo/data
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     networks:
       - collector
 

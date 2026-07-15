@@ -153,6 +153,30 @@ printf '%s\n' "$COMPOSE_JSON" | jq -e '
   and .services.trendradar.environment.AI_TRANSLATION_ENABLED == "false"
 ' >/dev/null || fail 'compose_ai_features_not_disabled'
 
+# rss-proxy (Mihomo sidecar) 约束
+require_env_key RSS_PROXY_IMAGE
+[[ -n "$(env_value RSS_PROXY_IMAGE)" ]] ||
+  fail 'env_nonempty_RSS_PROXY_IMAGE'
+printf '%s\n' "$COMPOSE_JSON" | jq -e '
+  (.services["rss-proxy"] | type == "object")
+  and (.services["rss-proxy"].networks | keys) == ["collector"]
+  and (.services["rss-proxy"].image == $IMG)
+  and (.services["rss-proxy"] | has("ports") | not)
+' --arg IMG "$(env_value RSS_PROXY_IMAGE)" >/dev/null ||
+  fail 'compose_rss_proxy_invalid'
+# rss-proxy 不加入 publish 网络、不映射端口（已在 compose_exposes_ports 与上面覆盖）
+printf '%s\n' "$COMPOSE_JSON" | jq -e '
+  (.services["rss-proxy"].networks | keys) == ["collector"]
+' >/dev/null || fail 'compose_rss_proxy_network_isolation'
+PROXY_EXAMPLE="$SCRIPT_DIR/proxy/config.example.yaml"
+require_nonempty "$PROXY_EXAMPLE"
+grep -Fq 'DOMAIN,nitter.net,NITTER' "$PROXY_EXAMPLE" ||
+  fail 'proxy_example_missing_nitter_rule'
+grep -Fq 'MATCH,DIRECT' "$PROXY_EXAMPLE" ||
+  fail 'proxy_example_missing_direct_rule'
+grep -Fq 'REPLACE_WITH_YOUR_CLASH_SUBSCRIPTION_URL' "$PROXY_EXAMPLE" ||
+  fail 'proxy_example_missing_placeholder'
+
 if [[ "$MODE" == '--static' ]]; then
   printf 'nas_static=passed\n'
   exit 0
@@ -275,6 +299,12 @@ if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
   grep -Eiq '(^|/)([.]env|[^/]+[.](db|sqlite|sqlite3))$'; then
   fail 'bundle_archive_contains_forbidden_file'
 fi
+if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
+  grep -Eq 'trendradar-nas/proxy/(config[.]yaml|data(/|$))'; then
+  fail 'bundle_archive_contains_proxy_secret'
+fi
+[[ -s "$BUNDLE_DIST_DIR/trendradar-nas/proxy/config.example.yaml" ]] ||
+  fail 'bundle_proxy_example_missing'
 if tar -tzf "$BUNDLE_DIST_DIR/trendradar-nas.tar.gz" |
   grep -Eq '(^|/)[.]git$'; then
   fail 'bundle_archive_contains_git_control_file'

@@ -1,6 +1,6 @@
 # v2-beta RC 本地镜像验证实施计划
 
-> 状态：**Gate 9 已于 2026-07-13 完成。官方 Python base cache、最小 Dockerfile 构建兼容性修复、本地 RC 镜像、`RC_IMPORT_OK`、`RC_CONTAINER_OK` 与无残留容器检查均已通过；未上传或部署。**
+> 状态：**Gate 9 已于 2026-07-13 完成。官方 Python base cache、最小 Dockerfile 构建兼容性修复、本地 RC 镜像、`RC_IMPORT_OK`、`RC_CONTAINER_OK` 与无残留容器检查均已通过；RC 镜像已于 2026-07-14 经 Gate 10 部署至生产并完成 10D 验收，详见 `../../roadmap.md`。**
 
 > 2026-07-12 执行记录：执行 Agent 在删除前停止。临时恢复脚本的 Registry 前置查询在约 27 秒后结束却没有产生可审计 stdout/stderr；因此未满足 config 等价性闸门，未删除标签、未下载 layer、未写 rootfs、未 import、未 build、未运行容器。临时脚本与目录均已清理。主控直接 `HEAD /v2/` 获得 Docker Hub 的公开 `401 Bearer` challenge，确认 registry 路由可达；当前阻塞是脚本可观测性而非 registry 路由。下一动作仅限只读逐阶段可观测性预检。
 
@@ -307,7 +307,7 @@ git diff --check
 
 Expected: JSON、30/30、37/37 和差异检查通过；A2 仍为归档方案。
 
-- [ ] **Step 3: 仅提交 Gate 9 收口文档**
+- [x] **Step 3: 仅提交 Gate 9 收口文档**
 
 ```bash
 git add docs/roadmap.md docs/superpowers/plans/2026-07-11-v2-beta-rc-image-validation.md docs/superpowers/plans/2026-07-13-v2-beta-container-observability.md docs/superpowers/specs/2026-07-10-v2-beta-deep-space-report-ui-design.md
@@ -315,6 +315,8 @@ git commit -m "docs: record v2 beta RC image validation"
 ```
 
 Expected: 不包含 Xjiankong 既有未提交文件；TrendRadar 分支不新增源码提交。
+
+> 实际执行：commit `476e097`（`docs: close v2 beta Gate 9 validation`），含 4 个文件，与计划一致。
 
 ## Gate Contract
 

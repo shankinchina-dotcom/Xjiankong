@@ -46,6 +46,7 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
    - `IMMEDIATE_RUN` 保持为 `false`。
    - `AI_ANALYSIS_ENABLED` 保持为 `false`。
    - `AI_TRANSLATION_ENABLED` 保持为 `false`。
+   - `RSS_PROXY_IMAGE` 保持为 `.env.example` 中的 `metacubex/mihomo` 固定 digest（Nitter RSS 代理容器镜像，不要改）。
 6. 在 DSM File Station 中右键 `.env`，打开 **属性 -> 权限**：仅保留管理员的读写权限，移除 `users` 和 `everyone` 的权限。`.env` 备份副本必须使用相同权限，且不得放入任何同步或公开目录。
 
 ## 4. 在 Container Manager 创建项目
@@ -57,17 +58,38 @@ Tunnel 必须为本项目独立创建。不要复用 Note 或 Photo 已有的 Tu
 5. 不启用可选的 Web Station portal/网页入口。
 6. 启动前在 Container Manager 预览 Compose，确认没有任何宿主机端口映射，再构建并启动项目。
 
-项目启动后应有三个容器：
+项目启动后应有四个容器：
 
 - `xjiankong-trendradar`：按计划采集、过滤、AI 分析并将报告写入 `output`。
+- `xjiankong-rss-proxy`：Mihomo sidecar，仅为 TrendRadar 的 Nitter RSS 请求提供代理出口（仅监听容器内部 `7890`，不映射宿主机端口）。
 - `xjiankong-report-web`：只读提供 `output` 内允许公开的 HTML 报告。
 - `xjiankong-cloudflared`：建立到 Cloudflare 的出站 Tunnel，将公网请求转给 `report-web`。
 
+### 4.5 启用 Nitter RSS 代理
+
+Nitter RSS 在 NAS 直连会失败（当前线上报告 RSS 成功数约 `11/44`，33 个 Nitter 源全挂）。`xjiankong-rss-proxy` 容器通过老板自己的 Clash 订阅为 Nitter 请求提供代理出口，其余 RSS 仍直连（由 Mihomo 规则 `DOMAIN,nitter.net,NITTER` / `MATCH,DIRECT` 分流）。
+
+启用步骤（只在首次部署代理或更新订阅时执行）：
+
+1. 准备真实代理配置 **仅存在于 NAS 本地**，不进仓库 / 部署包 / 日志 / 对话：
+   - 在 NAS File Station 进入 `/volume1/docker/trendradar-nas/`，确认存在 `proxy/` 目录（部署包已带 `proxy/config.example.yaml` 模板）。
+   - 把本地生成的真实 `proxy/config.yaml`（含订阅 URL）上传到 `/volume1/docker/trendradar-nas/proxy/config.yaml`。
+   - 右键 `proxy/config.yaml` → **属性 → 权限**：仅保留管理员读写，移除 `users` / `everyone`。
+2. 确认 `.env` 含 `RSS_PROXY_IMAGE`（值来自 `.env.example`，固定 `metacubex/mihomo` digest）；若 NAS 上 `.env` 缺少该行，补上后再重建。
+3. 在 Container Manager 的 `xjiankong` 项目页停止项目，再重新构建并启动；Compose 会创建 `xjiankong-rss-proxy` 并让 `trendradar` 依赖它启动。
+4. 验收：
+   - `xjiankong-rss-proxy` 容器运行且日志无订阅拉取错误。
+   - 在 `xjiankong-trendradar` 终端确认代理可达：
+     ```bash
+     docker exec xjiankong-trendradar sh -c "wget -qO- http://rss-proxy:7890 || echo PROXY_UNREACHABLE"
+     ```
+   - 人工触发一次采集后，公网报告 RSS 成功源数应明显高于 `11/44`，且原有 11 个非 Nitter 源继续成功。
+
 ## 5. 首次启动与验收
 
-1. 启动项目后，先在 Container Manager 确认三个容器都处于运行状态，且 `report-web` 健康检查通过。
+1. 启动项目后，先在 Container Manager 确认四个容器都处于运行状态，且 `report-web` 健康检查通过。
 2. `IMMEDIATE_RUN=false` 表示创建或重启容器时不会立即采集。`AI_ANALYSIS_ENABLED=false` 和 `AI_TRANSLATION_ENABLED=false` 表示首次启动时 AI 分析与 AI 翻译都关闭；未确认前，cron 可继续采集，但不调用 AI。
-3. 先在保持两个 AI 开关都为 `false` 的状态下完成三个容器状态、无端口映射和公网页面安全检查。
+3. 先在保持两个 AI 开关都为 `false` 的状态下完成四个容器状态、无端口映射和公网页面安全检查。
 4. 首次付费 AI 验收前，必须再次获得老板明确批准一次人工采集；该运行可能因翻译分批和分析包含多次付费 AI API 请求。获得批准后，在 `xjiankong-trendradar` 容器的终端中执行：
 
    ```bash

@@ -92,12 +92,16 @@ STAGING_DIR="$(mktemp -d "$DIST_ROOT/.${BUNDLE_NAME}.build.XXXXXX")" ||
   fail 'staging_create_failed'
 MANIFEST="$STAGING_DIR/config-manifest"
 BUNDLE_DIR="$STAGING_DIR/$BUNDLE_NAME"
-mkdir -p "$BUNDLE_DIR/config" "$BUNDLE_DIR/output" || fail 'staging_layout_failed'
+mkdir -p "$BUNDLE_DIR/config" "$BUNDLE_DIR/output" "$BUNDLE_DIR/proxy" ||
+  fail 'staging_layout_failed'
 cp "$SCRIPT_DIR/docker-compose.yml" "$BUNDLE_DIR/docker-compose.yml" ||
   fail 'template_copy_failed'
 cp "$SCRIPT_DIR/.env.example" "$BUNDLE_DIR/.env.example" || fail 'template_copy_failed'
 cp "$SCRIPT_DIR/nginx.conf" "$BUNDLE_DIR/nginx.conf" || fail 'template_copy_failed'
 cp "$SCRIPT_DIR/README.md" "$BUNDLE_DIR/README.md" || fail 'template_copy_failed'
+# 只复制不含订阅 URL 的 Mihomo 配置模板；真实 config.yaml / data 由 NAS 本地写入
+cp "$SCRIPT_DIR/proxy/config.example.yaml" "$BUNDLE_DIR/proxy/config.example.yaml" ||
+  fail 'template_copy_failed'
 
 is_excluded_config_directory() {
   local name="$1"
@@ -400,7 +404,17 @@ Dir.glob(File.join(config_root, '**', '*'), File::FNM_DOTMATCH).sort.each do |pa
 end
 RUBY
 
-tar -czf "$STAGING_DIR/$BUNDLE_NAME.tar.gz" -C "$STAGING_DIR" "$BUNDLE_NAME" ||
+# 代理配置扫描：示例模板只允许占位订阅 URL；真实 config.yaml / data 不得进入包
+if [[ -e "$BUNDLE_DIR/proxy/config.example.yaml" ]]; then
+  grep -Fq 'REPLACE_WITH_YOUR_CLASH_SUBSCRIPTION_URL' \
+    "$BUNDLE_DIR/proxy/config.example.yaml" ||
+    fail 'proxy_example_missing_placeholder'
+fi
+if [[ -e "$BUNDLE_DIR/proxy/config.yaml" ]]; then
+  fail 'bundle_contains_proxy_secret_config'
+fi
+
+COPYFILE_DISABLE=1 tar -czf "$STAGING_DIR/$BUNDLE_NAME.tar.gz" --no-mac-metadata -C "$STAGING_DIR" "$BUNDLE_NAME" ||
   fail 'archive_create_failed'
 
 if [[ -e "$FINAL_DIR" ]]; then

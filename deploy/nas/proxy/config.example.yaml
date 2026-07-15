@@ -1,0 +1,58 @@
+# Mihomo (Clash 内核) 配置模板 —— Nitter RSS 代理隔离
+#
+# 这是示例模板，不含任何真实订阅 URL。
+# 在 NAS 上部署时，复制本文件为同目录的 config.yaml，并把
+#   proxy-providers.nitter.provider.url
+# 替换为老板自己的 Clash 订阅地址（只写本地文件，不进仓库/部署包/日志/对话）。
+#
+# 安全约束：
+#   - 不监听宿主机端口（仅容器内部 7890）
+#   - 不启用 TUN、透明代理、DNS 接管、external controller
+#   - 不加入 publish 网络，不声明 host network
+
+mixed-port: 7890
+# allow-lan 必须为 true，否则 Mihomo 只绑 127.0.0.1、bind-address 被忽略，
+# 同 Docker 网络的 trendradar 容器经 rss-proxy:7890 访问会 ConnectionRefused。
+# 安全不变：compose 不映射宿主机端口，7890 仅在 collector 网络内可达。
+allow-lan: true
+bind-address: 0.0.0.0
+mode: rule
+log-level: warning
+ipv6: false
+external-controller: ""
+secret: ""
+unified-delay: true
+global-client-fingerprint: chrome
+
+# 不接管 DNS，避免影响 report-web / cloudflared 的网络
+dns:
+  enable: false
+
+proxies: []
+proxy-groups:
+  - name: NITTER
+    # url-test 自动从 nitter provider 选延迟最低的健康节点。
+    # 注意：proxy-group 必须用 use: 引用 provider，否则 provider 节点不会被纳入组（踩坑）。
+    # 不放 DIRECT——nitter 必须走代理节点，否则等于没代理。
+    type: url-test
+    url: https://www.google.com/generate_204
+    interval: 300
+    tolerance: 50
+    use:
+      - nitter
+
+proxy-providers:
+  nitter:
+    type: http
+    # ↓↓↓ 替换为老板的 Clash 订阅 URL（本地 NAS 文件，勿提交仓库） ↓↓↓
+    url: "https://REPLACE_WITH_YOUR_CLASH_SUBSCRIPTION_URL"
+    interval: 3600
+    path: ./data/nitter-provider.yaml
+    health-check:
+      enable: true
+      interval: 300
+      url: https://www.google.com/generate_204
+
+rules:
+  - DOMAIN,nitter.net,NITTER
+  - MATCH,DIRECT

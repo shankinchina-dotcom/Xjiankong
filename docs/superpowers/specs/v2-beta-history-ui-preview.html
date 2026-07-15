@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 情报终端 · v2-beta mockup（抽屉式历史）</title>
+<style>
+  :root{
+    --bg1:#08111f; --bg2:#0b1628; --panel:linear-gradient(135deg, rgba(32,87,160,.22), rgba(72,56,170,.16));
+    --line:rgba(150,190,255,.20); --txt:#e8f1ff; --dim:#93a8c8; --accent:#66a6ff;
+    --badge:rgba(102,166,255,.14); --evi:rgba(20,40,80,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(1200px 800px at 70% -10%, #0e1d33 0%, var(--bg1) 55%, var(--bg2) 100%);color:var(--txt);line-height:1.6;min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 22px 60px}
+  /* 顶部情报栏 */
+  .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 2px 18px rgba(10,25,55,.4);margin-bottom:22px}
+  .topbar .proj{font-weight:800;font-size:17px;letter-spacing:.5px}
+  .topbar .ver{color:var(--accent);font-weight:700;font-size:14px}
+  .topbar .latest{background:var(--badge);color:var(--accent);font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+  .topbar .cnt{color:var(--dim);font-size:13px}
+  .topbar .hist-btn{margin-left:auto;background:rgba(102,166,255,.12);border:1px solid var(--line);color:var(--accent);font-weight:700;font-size:14px;padding:8px 16px;border-radius:10px;cursor:pointer}
+  .topbar .hist-btn:hover{background:rgba(102,166,255,.22)}
+  /* Hero */
+  .hero{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:22px 24px;margin-bottom:24px;box-shadow:0 2px 18px rgba(10,25,55,.3)}
+  .hero-ico{font-size:22px;margin-right:8px}
+  .hero h1{display:inline;font-size:22px;font-weight:820}
+  .hero .judge{margin-top:10px;font-size:15px;color:#cfe0ff}
+  .hero .metrics{margin-top:14px;display:flex;gap:18px;flex-wrap:wrap;color:var(--dim);font-size:13px}
+  .hero .metrics b{color:var(--txt);font-weight:700}
+  /* 研判区 */
+  .sec{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 14px rgba(10,25,55,.25)}
+  .sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .sec-ico{font-size:18px}
+  .sec-num{color:var(--accent);font-weight:800;font-size:13px}
+  .sec-name{font-size:17px;font-weight:780}
+  .sec-summary{color:var(--dim);font-size:13px;margin:2px 0 10px 28px;font-style:normal}
+  .sec-body{list-style:none;padding-left:22px;border-left:2px solid rgba(102,166,255,.35)}
+  .sec-body li{position:relative;padding:5px 0;font-size:14px}
+  .sec-body li::before{content:"";position:absolute;left:-22px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.7}
+  .r-ref{color:#7fa8e0;font-size:11px;margin-left:6px;opacity:.85}
+  /* 证据流 */
+  .evi-title{font-size:16px;font-weight:780;margin:26px 0 12px;display:flex;align-items:center;gap:8px}
+  .evi{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .evi-item{border:1px solid var(--line);border-radius:12px;background:var(--evi);padding:12px 14px}
+  .evi-meta{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--dim);margin-bottom:5px;flex-wrap:wrap}
+  .evi-author{color:var(--accent);font-weight:700}
+  .evi-badge{background:rgba(245,158,11,.14);color:#d9a441;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px}
+  .evi-title-txt{font-size:14px;font-weight:700;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  /* 抽屉 */
+  .drawer-overlay{position:fixed;inset:0;background:rgba(3,8,18,.55);opacity:0;visibility:hidden;transition:.25s;z-index:40}
+  .drawer-overlay.open{opacity:1;visibility:visible}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:380px;max-width:88vw;background:linear-gradient(160deg,#0c1830,#0a1426);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .28s ease;z-index:50;overflow-y:auto;padding:20px}
+  .drawer.open{transform:translateX(0)}
+  .drawer h3{font-size:15px;margin:14px 0 8px;color:var(--accent);display:flex;align-items:center;gap:6px}
+  .drawer .close{position:absolute;top:14px;right:16px;background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px}
+  .cur-box{border:1px solid var(--accent);border-radius:12px;background:rgba(102,166,255,.10);padding:12px 14px;margin-bottom:6px}
+  .tl-v,.rec-v{display:flex;justify-content:space-between;padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(102,166,255,.06);margin-bottom:7px;font-size:13px}
+  .tl-v .t{font-weight:700}
+  .tl-v .badge{background:var(--badge);color:var(--accent);font-size:11px;padding:1px 8px;border-radius:999px}
+  .arch-day{font-size:13px;color:var(--dim);margin:10px 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 顶部情报栏 -->
+  <div class="topbar">
+    <span class="proj">🛰️ AI 情报终端</span>
+    <span class="ver">2026-07-09 20:00</span>
+    <span class="latest">最新</span>
+    <span class="cnt">今日 6 版</span>
+    <button class="hist-btn" onclick="openHist()">📜 历史</button>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <span class="hero-ico">🎯</span><h1>今日一句话判断</h1>
+    <div class="judge">成本战取代能力战：DeepSeek V4 把单位推理成本压到 GPT-4o 的 1/10，开源与低价模型正在重写「该用哪个模型」的默认答案；同时监管与算力供给同步收紧，下半月重点是看谁先跌破可用成本线。</div>
+    <div class="metrics">
+      <span>热榜 <b>11/11</b></span>
+      <span>RSS <b>38/44</b></span>
+      <span>AI 研判 <b>8 板块</b></span>
+      <span>生成 <b>20:00</b></span>
+      <span>今日版本 <b>6</b></span>
+    </div>
+  </div>
+
+  <!-- 研判区：8 板块，图标 + 编号 + 分散总结 + 详细列表 -->
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">🎯</span><span class="sec-num">01</span><span class="sec-name">今日核心判断</span></div>
+    <p class="sec-summary">今天的主线不是「又发了什么模型」，而是「便宜到什么程度会改变使用习惯」。</p>
+    <ul class="sec-body">
+      <li>DeepSeek V4 正式发布，数学推理与代码生成达 SOTA，API 价格仅为 GPT-4o 的 1/10。<span class="r-ref">[R001. deepseek.com]</span></li>
+      <li>Anthropic Claude 4 Opus 支持 200K 上下文，多语言能力显著提升，定位高端推理。<span class="r-ref">[R002. anthropic.com]</span></li>
+      <li>Google DeepMind AlphaFold 3 预测蛋白-配体相互作用，药物研发周期预期缩短。<span class="r-ref">[R003. nature.com]</span></li>
+      <li>OpenAI GPT-5 延期，安全审查未通过预期标准，内部测试发现推理链不稳定。<span class="r-ref">[R004. theverge.com]</span></li>
+      <li>xAI Grok 4 开放 API，定价低于同级闭源模型，争夺开发者心智。<span class="r-ref">[R005. x.com]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">🔬</span><span class="sec-num">02</span><span class="sec-name">研究 / 模型突破</span></div>
+    <p class="sec-summary">效率架构（稀疏注意力、MoE、SSM）集中突破，训练与推理成本被持续压低。</p>
+    <ul class="sec-body">
+      <li>Mamba 架构新变体 Jamba 1.5 结合 SSM 与 Transformer，长文本效率提升 3 倍且精度不降。<span class="r-ref">[R006. arxiv.org]</span></li>
+      <li>DeepSeek-VL2 用 2B active params 达到 dense 7B 效果，推理成本降 70%。<span class="r-ref">[R007. huggingface.co]</span></li>
+      <li>Google CM3 将图像/视频/音频映射到同一语义空间，zero-shot 迁移验证通过。<span class="r-ref">[R008. google.ai]</span></li>
+      <li>Flash Attention 3 后端合并进主流训练栈，显存占用减半、吞吐翻倍。<span class="r-ref">[R009. github.com]</span></li>
+      <li>Karpathy 发布 nanoGPT v2，引入稀疏注意力，训练效率提升 40%。<span class="r-ref">[R010. nitter-karpathy]</span></li>
+      <li>多模态统一编码器在跨模态检索基准上超专用模型 2.3 个点。<span class="r-ref">[R011. arxiv.org]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">🛠️</span><span class="sec-num">03</span><span class="sec-name">产品与工具变化</span></div>
+    <p class="sec-summary">开发者工具链在「更便宜地跑、更顺手地接」两个方向同时推进。</p>
+    <ul class="sec-body">
+      <li>vLLM 支持 Continuous Batching 后 P95 延迟降 45%，K8s 部署模板 star 超 12k。<span class="r-ref">[R012. github.com]</span></li>
+      <li>Hugging Face Transformers 4.42 新增 FA3 后端，显存占用减半。<span class="r-ref">[R013. huggingface.co]</span></li>
+      <li>Cursor 1.0 发布后台 agent 模式，可并行处理多文件重构。<span class="r-ref">[R014. cursor.com]</span></li>
+      <li>Claude Code 支持子 agent 编排，复杂任务可拆给多个 worker。<span class="r-ref">[R015. anthropic.com]</span></li>
+      <li>LangChain 新增本地优先向量检索，离线 RAG 部署成本下降。<span class="r-ref">[R016. langchain.com]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">🌐</span><span class="sec-num">04</span><span class="sec-name">开源项目与开发者生态</span></div>
+    <p class="sec-summary">社区 fine-tune 与推理优化爆发，开源模型可用性逼近闭源中端。</p>
+    <ul class="sec-body">
+      <li>LLaMA 3.1 400B 泄露版社区 fine-tune 爆发，中文任务超 Qwen2-72B。<span class="r-ref">[R017. github.com]</span></li>
+      <li>Qwen3-72B 登顶开源榜单，工具调用与长上下文领先。<span class="r-ref">[R018. qwenlm.com]</span></li>
+      <li>Ollama 支持多 GPU 分片，消费级显卡可跑 70B 量化模型。<span class="r-ref">[R019. ollama.com]</span></li>
+      <li>Stable Diffusion 3.5 开源权重发布，文字渲染质量大幅提升。<span class="r-ref">[R020. stability.ai]</span></li>
+      <li>llama.cpp 新增端侧推理后端，手机可离线跑 3B 模型。<span class="r-ref">[R021. github.com]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">💰</span><span class="sec-num">05</span><span class="sec-name">大厂 / 融资 / 政策 / 算力动态</span></div>
+    <p class="sec-summary">资本、算力、监管三线同步收紧：xAI 大额融资、H200 扩产、欧盟 AI Act 执法启动。</p>
+    <ul class="sec-body">
+      <li>NVIDIA H200 产能爬坡，Q3 供货环比增 60%，云厂商订单排至年底。<span class="r-ref">[R022. reuters.com]</span></li>
+      <li>xAI 完成 C 轮 60 亿美金融资，估值 240 亿，沙特主权基金领投。<span class="r-ref">[R023. bloomberg.com]</span></li>
+      <li>欧盟 AI Act 第一阶段执法启动，高风险系统需 12 个月内合规。<span class="r-ref">[R024. eu.ai]</span></li>
+      <li>AMD MI300X 云厂商采用率上升，性价比倒逼 GPU 定价。<span class="r-ref">[R025. tomhardware.com]</span></li>
+      <li>微软 Copilot PC 出货破 500 万台，企业 adoption 达 35%。<span class="r-ref">[R026. microsoft.com]</span></li>
+      <li>中国《生成式 AI 服务管理办法》修订征求意见，明确训练数据来源要求。<span class="r-ref">[R027. cac.gov.cn]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">👤</span><span class="sec-num">06</span><span class="sec-name">X 关键人物观点</span></div>
+    <p class="sec-summary">关键人物集中在「成本曲线」与「 agent 落地」两个叙事上。</p>
+    <ul class="sec-body">
+      <li>Karpathy：未来 18 个月推理成本会再降一个数量级，端侧 agent 成主流。<span class="r-ref">[R028. nitter-karpathy]</span></li>
+      <li>LeCun：世界模型才是 AGI 路径，纯 LLM scaling 已接近天花板。<span class="r-ref">[R029. nitter-lecun]</span></li>
+      <li>Sam Altman：GPT-5 延期是为安全，但价格会显著低于当前档。<span class="r-ref">[R030. nitter-sama]</span></li>
+      <li>Yann 批评过度炒作 agent，强调可验证工具调用的重要性。<span class="r-ref">[R031. nitter-lecun]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">⚠️</span><span class="sec-num">07</span><span class="sec-name">风险与下周关注</span></div>
+    <p class="sec-summary">诈骗与注入攻击新变种警示，合规窗口进入 12 个月倒计时。</p>
+    <ul class="sec-body">
+      <li>Deepfake 音频诈骗案频发，某公司 CFO 被骗转账 2500 万美元。<span class="r-ref">[R032. reuters.com]</span></li>
+      <li>间接 prompt injection 通过网页触发，现有 guardrail 拦截率仅 62%。<span class="r-ref">[R033. arxiv.org]</span></li>
+      <li>模型水印标准化推进，IEEE 提出可证明 AI 生成内容检测框架草案。<span class="r-ref">[R034. ieee.org]</span></li>
+      <li>欧盟 AI Act 高风险系统 12 个月合规倒计时启动。<span class="r-ref">[R035. eu.ai]</span></li>
+      <li>NYT 等媒体集体起诉 Perplexity，抓取版权内容法律边界待裁决。<span class="r-ref">[R036. nytimes.com]</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="sec-ico">📚</span><span class="sec-num">08</span><span class="sec-name">原始来源索引</span></div>
+    <p class="sec-summary">全部结论可回溯到原始消息；按来源类型分类，便于核查。</p>
+    <ul class="sec-body">
+      <li><b>X / Nitter：</b>karpathy、lecun、sama 等（共 11 源，[R028]–[R031] 等）</li>
+      <li><b>媒体：</b>reuters、bloomberg、theverge、nature、eu.ai 等（[R001]–[R027]）</li>
+      <li><b>论文 / 开源：</b>arxiv、github、huggingface、qwenlm（[R006]–[R021]）</li>
+      <li><b>监管：</b>cac.gov.cn、eu.ai、ieee.org（[R024][R027][R034]）</li>
+      <li style="border-left:none;padding-left:0"><b>统计：</b>33 源 · 19 条 [R] · 2 条 [H] · 0 条无法回溯</li>
+    </ul>
+  </div>
+
+  <!-- 证据流 -->
+  <div class="evi-title">🛰️ 过去 24 小时精选情报（RSS 证据流）</div>
+  <div class="evi">
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">@karpathy</span><span>2h</span><span class="evi-badge">NEW</span></div><div class="evi-title-txt">nanoGPT v2 正式开源：引入稀疏注意力机制后，在 8xA100 上训练效率提升 40%，长序列显存占用下降一半，已支持分布式训练开箱即用。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">@ylecun</span><span>3h</span></div><div class="evi-title-txt">纯 LLM 的 scaling law 已经接近边际，下一步是世界模型 + 联合嵌入预测架构，而不是更大的下一个 token 预测器。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">techcrunch</span><span>1h</span><span class="evi-badge">NEW</span></div><div class="evi-title-txt">DeepSeek V4 发布后 24 小时内 API 调用量增长 300%，开发者批量迁移低成本推理任务。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">36kr</span><span>4h</span></div><div class="evi-title-txt">智谱 GLM-5.2 多模态版开放内测，支持图像理解与视频摘要，定价对标开源模型。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">huggingface</span><span>5h</span></div><div class="evi-title-txt">Transformers 4.42 发布：默认启用 Flash Attention 3 后端，长上下文训练显存占用减半，已支持 Qwen3 全系列。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">@sama</span><span>6h</span></div><div class="evi-title-txt">GPT-5 会延期，但价格会显著低于当前档，安全审查是唯一的阻塞项。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">reuters</span><span>3h</span></div><div class="evi-title-txt">NVIDIA H200 产能爬坡 Q3 环比增 60%，云厂商订单排队至年底，推理卡供给仍紧张。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">bloomberg</span><span>8h</span></div><div class="evi-title-txt">xAI 完成 C 轮 60 亿美金融资，估值达 240 亿，沙特主权基金领投，资金用于超算集群扩张。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">arstechnica</span><span>7h</span></div><div class="evi-title-txt">欧盟 AI Act 第一阶段执法启动，高风险 AI 系统需在 12 个月内完成合规评估，违规罚款可达全球营收 7%。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">theverge</span><span>9h</span></div><div class="evi-title-txt">OpenAI 确认 GPT-5 延期，内部测试发现复杂推理链不稳定，安全审查未达预期标准。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">github</span><span>10h</span></div><div class="evi-title-txt">vLLM 0.6 支持 Continuous Batching 后 P95 延迟降 45%，Kubernetes 部署模板 star 数突破 12k。</div></div>
+    <div class="evi-item"><div class="evi-meta"><span class="evi-author">nature</span><span>11h</span></div><div class="evi-title-txt">AlphaFold 3 预测蛋白-配体相互作用结构，药物研发早期筛选周期预期缩短 6 个月。</div></div>
+  </div>
+
+</div>
+
+<!-- 抽屉 -->
+<div class="drawer-overlay" id="ov" onclick="closeHist()"></div>
+<div class="drawer" id="dw">
+  <button class="close" onclick="closeHist()">×</button>
+  <h3>📜 AI 情报历史</h3>
+  <h3>📍 当前版本</h3>
+  <div class="cur-box">2026-07-09 20:00 · <b>最新版本</b></div>
+  <h3>🕐 今日时间线</h3>
+  <div class="tl-v"><span class="t">20:00</span><span class="badge">最新</span></div>
+  <div class="tl-v"><span class="t">18:30</span><span>热榜 11/11 · RSS 37/44</span></div>
+  <div class="tl-v"><span class="t">16:32</span><span>热榜 11/11 · RSS 36/44</span></div>
+  <div class="tl-v"><span class="t">14:10</span><span>热榜 11/11 · RSS 38/44</span></div>
+  <div class="tl-v"><span class="t">12:03</span><span>热榜 11/11 · RSS 40/44</span></div>
+  <div class="tl-v"><span class="t">08:02</span><span>热榜 11/11 · RSS 35/44</span></div>
+  <div class="tl-v"><span class="t">04:01</span><span>热榜 11/11 · RSS 33/44</span></div>
+  <h3>🗓 近期</h3>
+  <div class="rec-v"><span>2026-07-08</span><span>3 版 · 最新 20:51</span></div>
+  <div class="rec-v"><span>2026-07-07</span><span>4 版 · 最新 20:00</span></div>
+  <div class="rec-v"><span>2026-07-06</span><span>2 版 · 最新 16:00</span></div>
+  <h3>📜 AI 情报历史归档</h3>
+  <div class="arch-day">2026-07-09</div>
+  <div class="rec-v"><span>20:00 最新</span><span>热榜 11/11 · RSS 38/44</span></div>
+  <div class="rec-v"><span>16:32</span><span>热榜 11/11 · RSS 36/44</span></div>
+  <div class="arch-day">2026-07-08</div>
+  <div class="rec-v"><span>20:51</span><span>v2-alpha 验证报告</span></div>
+  <div class="arch-day">2026-07-07</div>
+  <div class="rec-v"><span>20:00</span><span>热榜 11/11 · RSS 41/44</span></div>
+  <div class="arch-day">2026-07-06</div>
+  <div class="rec-v"><span>16:00</span><span>热榜 11/11 · RSS 39/44</span></div>
+</div>
+
+<script>
+function openHist(){document.getElementById('dw').classList.add('open');document.getElementById('ov').classList.add('open');}
+function closeHist(){document.getElementById('dw').classList.remove('open');document.getElementById('ov').classList.remove('open');}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeHist();});
+</script>
+</body>
+</html>

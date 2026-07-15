@@ -29,8 +29,11 @@
 | `docs/requirements.md` | GitHub AI 追踪原始需求 | 需求变化先改此文件 |
 | `docs/github-ai-tracking-plan.md` | GitHub/HuggingFace/Release RSS 接入记录 | 必须区分“已接入”和“指标能力待复核” |
 | `docs/archive/` | 已放弃、暂停或已完成的早期方案与快照 | 不作为执行入口；恢复前重新核验外部依赖。含早期 NAS 部署 specs/plans（2026-07-03/04），其实施已被 `docs/nas-deployment.md` 实战手册吸收，不再作为活动设计源 |
-| `docs/superpowers/specs/` | 已确认但尚未实施的设计规格 | 规格经老板确认后写入；实施状态必须在文档中明确标注 |
-| `docs/superpowers/plans/` | 已批准设计对应的实施计划 | 使用复选框追踪；外部资源操作必须保留确认闸门 |
+| `docs/superpowers/specs/` | 设计规格（含已完成与历史） | 规格经老板确认后写入；实施状态必须在文档中明确标注 |
+| `docs/superpowers/plans/` | 实施计划与交接摘要 | 使用复选框追踪；外部资源操作必须保留确认闸门；完成态交接优先读最新 handoff |
+| `docs/superpowers/prototypes/` | 只读视觉原型（不部署） | 仅供 UI 裁定；不得把模拟数据写入生产 |
+| `docs/stability-observation.md` | 生产稳定性只读观察日志 | 只追加事实；不改生产 |
+| `docs/gate10d-handoff.md` | Gate 10D 历史交接 | 已完成；保留复现记录 |
 | `deploy/nas/` | 群晖 Container Manager 部署模板和生成器 | 不保存凭据或生成包；外部部署前必须重新确认 |
 | `deploy/nas/proxy/config.example.yaml` | Mihomo（Clash 内核）Nitter 代理配置模板 | 只含占位订阅 URL；真实 `config.yaml` 与 `data/` 由 NAS 本地写入，不入库、不进部署包 |
 | `config/x-accounts.json` | X 账号唯一数据源 | 账号只在此处新增、删除、改组或改审核策略 |

@@ -1,10 +1,10 @@
 # v2-beta 深空研判报告 UI 重构设计
 
-> 状态：**本地代码实现、Gate 7 免费独立审计、Gate 8 发布候选冻结、Gate 9 本地镜像验证与 Gate 9.1 无障碍加固均已完成。当前 RC 镜像为 `xjiankong-trendradar:v2-beta-rc-20260713`，两项一次性容器断言已通过；尚未上传或部署。**
+> 状态：**设计已落地。v2-beta 已于 2026-07-14 经 Gate 10 部署至生产（镜像 `xjiankong-trendradar:v2-beta-rc-20260713`），10D 付费全链路验收通过；执行进度与最新基线以 `../../roadmap.md` 为权威。**
 >
 > 本文覆盖 v2-beta 首页、历史入口和证据流的视觉与交互重构；它补充并覆盖 `2026-07-10-v2-beta-ui-visual-standards.md` 中与图标语言、卡片结构有关的旧约定。产品边界、历史数据边界、来源追溯要求仍以 `2026-07-09-v2-beta-intelligence-history-ui-design.md` 为准。
 >
-> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」、Gate 5「受控 `history.json` 生成」、Gate 6「深空报告与历史 UI 本地实现」、Gate 7「本地免费独立审计」、Gate 8「发布候选冻结」、Gate 9「本地镜像验证」与 Gate 9.1「上线前无障碍加固」均已完成。功能基线为 `8f7e385a`，Docker 构建兼容性提交为 `5c02c6ce`，最终构建 HEAD 为 `61ba3932`；未部署生产。
+> 设计闸门：Gate 2.5「深空研判报告视觉重构设计」、Gate 3「原始消息链接 404 只读诊断」、Gate 4「Codex 审计 mockup 与数据映射」、Gate 5「受控 `history.json` 生成」、Gate 6「深空报告与历史 UI 本地实现」、Gate 7「本地免费独立审计」、Gate 8「发布候选冻结」、Gate 9「本地镜像验证」与 Gate 9.1「上线前无障碍加固」均已完成。功能基线为 `8f7e385a`，Docker 构建兼容性提交为 `5c02c6ce`，最终构建 HEAD 为 `61ba3932`；已于 2026-07-14 经 Gate 10 部署至生产。
 
 > 视觉参考：[`v2-beta-deep-space-report-reference.png`](v2-beta-deep-space-report-reference.png)。图中标题、条目、时间和版本号均为视觉占位，不是项目真实数据；连续报告、单色线性图标、深空蓝 Hero、证据流和历史抽屉才是应继承的设计要点。
 

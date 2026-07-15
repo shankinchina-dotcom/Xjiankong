@@ -230,25 +230,36 @@ docker build --platform linux/amd64 --pull=false \
 | 回滚 | **未发生** |
 | 付费报告 | **未触发** |
 
-**Task 7 停点：** 生产已切换至 V4 RC；**Task 7 已执行并经 Codex 复审通过**；**Task 8 未批准／未执行**。
+**Task 7 停点：** 生产已切换至 V4 RC；**Task 7 已执行并经 Codex 复审通过**。
 
 ### Task 8: Gate V4-D——一次付费全链路验收
 
-- [ ] **Step 1: 单独说明费用与确认**
+- [x] **Step 1: 单独说明费用与确认**（2026-07-15 老板批准）
 
-说明只触发一次报告生成，会调用当前生产 AI 分析／翻译；检查 cron 并发窗口。老板确认后才运行。
+并发闸门：NAS 23:18 CST；cron `0 */4 * * *`；下次自动 00:00（间隔 ≥20 分钟）；无 `python -m trendradar` 采集进程；镜像 `v2-beta-v4-rc-20260715` / `365c92d5…`；RestartCount=0。
 
-- [ ] **Step 2: 同一次运行证据**
+- [x] **Step 2: 同一次运行证据**（2026-07-15，仅一次）
 
-记录开始／结束时间、RC、stderr、AI、翻译、热榜、RSS、history 前后 hash 和新增快照。只允许一个新增快照。
+| 字段 | 实测 |
+|---|---|
+| 证据目录 | `/volume1/docker/trendradar-nas/backups/v4-task8-20260715-231822`（700／600） |
+| 窗口 | start `1784128715` → end `1784128964`（249s）；exit **0** |
+| stderr | 0 字节，无 ImportError／Traceback |
+| 热榜 | **11/11** 成功 |
+| RSS | **42/44**（Nitter **31/33**：xai 404、GabrielPeterss4 404；非 Nitter **11/11**） |
+| 翻译 | **26/26** 成功 |
+| AI | `分析完成`；模型 `deepseek/deepseek-chat` |
+| history | `c848ca7b…` → `e1d7b8bc…`；schema 仅 `dates/latest/schema_version`；latest `20-05` → **`/html/2026-07-15/23-22.html`** |
+| 快照 | 64→65；**仅新增 1 个**标准快照；旧 `20-05.html` SHA 不变 |
+| 触发命令 | `docker exec … sh -c "cd /app && /app/.venv/bin/python -m trendradar"`（非 login） |
 
-- [ ] **Step 3: V4 与安全验收**
+- [x] **Step 3: V4 与安全验收**
 
-新页面必须有 8 章节、suite 包含 hero/01、J1–J3 对应、历史抽屉、来源链接；公网首页、history、新旧快照 200；`.env`、DB、config、非白名单 JSON 继续 404。
+新页 `23-22.html`：`V4_DOM_OK`（8 section、suite 含 hero/01、J1–J3 映射、证据单次 content、6 metrics、208px 导航、notice 在 suite 外、history-drawer、source-ref）。公网：`/`、`/history.json`、`/history.html`、新/旧快照 **200**；`/.env`、`/news/test.db`、`/config/config.yaml`、`/output/news/data.json` **404**。mtime 落在运行窗口内。四容器 Id/Image/StartedAt/RC 未因本轮变化。邮件渲染未由本次付费网页报告运行覆盖；隔离契约沿用 Task 5 本地 fixture 21/21 结果，不计入 Task 8 新运行证据。
 
-- [ ] **Step 4: 判定**
+- [x] **Step 4: 判定**
 
-关键断言失败立即回滚到 `v2-beta-rc-20260713` 并只重建 trendradar；通过后更新 `docs/roadmap.md` 和稳定性观察。不得自动清理 tar、备份或旧镜像。
+**通过，未回滚。** 状态：**Task 8 已执行并经 Codex 最终复审通过**；文档可提交。未 push、未清理证据、未二次运行。
 
 ## 下个 Agent 的第一条动作
 

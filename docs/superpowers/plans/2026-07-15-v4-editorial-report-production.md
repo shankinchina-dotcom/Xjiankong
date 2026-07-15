@@ -176,13 +176,36 @@ docker build --platform linux/amd64 --pull=false \
 
 ### Task 6: Gate V4-A／V4-B——NAS 只读基线、备份和传输
 
-- [ ] **Step 1: V4-A 只读基线**
+- [x] **Step 1: V4-A 只读基线**（2026-07-15）
 
-单独确认后读取四容器、当前镜像、磁盘、`.env` 的 `TRENDRADAR_IMAGE` 单行、挂载、网络、旧镜像可引用性、公网安全路径和最近快照。禁止写入、上传、加载、重建或付费运行。
+| 项 | 实测 |
+|---|---|
+| SSH／sudo docker | `z5451530@192.168.1.193` 可达；Docker 24.0.2 amd64（`PATH` 需含 `/usr/local/bin`） |
+| 四容器 | trendradar / report-web(healthy) / cloudflared / rss-proxy 均 running |
+| 生产镜像 | `TRENDRADAR_IMAGE=xjiankong-trendradar:v2-beta-rc-20260713`；运行 Image `sha256:c122cdb56076…` |
+| 挂载 | trendradar：config ro + output rw；report-web：nginx.conf ro + output ro |
+| 网络 | collector：trendradar+rss-proxy；publish：report-web+cloudflared |
+| 磁盘 | `/volume1` 可用 1.3T；`/tmp` 可用 4.5G |
+| V4 残留 | NAS 无 `v2-beta-v4-rc-20260715` 标签；无 V4 tar |
+| 稳定性备注 | 当日 14:11／18:10 观察曾 SSH 超时；V4-A 时 SSH 恢复，四容器自 10C 起持续 Up，RestartCount=0 |
 
-- [ ] **Step 2: V4-B 受限备份与镜像传输**
+- [x] **Step 2: V4-B 受限备份与镜像传输**（2026-07-15）
 
-再次确认后备份 `.env`、Compose 摘要、当前容器身份和最新报告；导出／传输新 RC，双端 SHA-256 校验并 `docker load`。加载后运行免费断言，但不改 `.env`、不重建容器。
+| 字段 | 实测 |
+|---|---|
+| 备份目录 | `/volume1/docker/trendradar-nas/backups/v4-rc-20260715-224353`（dir 700，`.env` 600，18 文件，manifest OK） |
+| 指针 | `/tmp/xjiankong-v4-backup-dir` |
+| 本地 tar | `/tmp/v2-beta-v4-rc-20260715.tar`，138,140,672 bytes |
+| tar SHA-256 | `88b1273f5f1766a212472ef1c853d76438baee5976e25b949ffb107e53c8b195`（双端一致） |
+| NAS load 后 Config ID | `sha256:365c92d50928525df93dfb9943051d914c647ac2337f58f29df245536753d1dc` |
+| Mac Image ID（构建侧） | `sha256:18d49e97f936f50b354bf250fce05537dcb7dba8c4fc9c2c1cbcf17d3770ab4e` |
+| RootFS DiffID 14 层 | 本地与 NAS **全序一致**；chain SHA-256 `a6e19f4152598da1a628f75dd7d66338c708e865a8d4a9f5be7cd368d0b16687` |
+| 平台 | linux/amd64；Entrypoint `/entrypoint.sh`；WorkingDir `/app` |
+| NAS Size | 373,538,809（引擎口径；与 Mac Size 差异预期） |
+| 免费断言 | NAS `RC_IMPORT_OK` + 扩展 `RC_CONTAINER_OK` 退出码 0；无残留验证容器 |
+| 生产未变 | 四容器 Id/Image/StartedAt/RestartCount 与备份前完全一致；`.env` 镜像行仍为 `v2-beta-rc-20260713` |
+
+**Task 6 停点：** 镜像已 load 到 NAS 但**未切换生产**。等待 Codex 审查后，老板单独确认才可进入 Task 7。
 
 ### Task 7: Gate V4-C——生产镜像单点切换
 

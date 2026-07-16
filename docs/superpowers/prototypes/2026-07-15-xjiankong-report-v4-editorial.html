@@ -321,8 +321,14 @@ a{color:var(--accent);text-decoration:none}
 .feed-toggle .chev{display:inline-block;font-size:11px;line-height:1;transition:transform .28s ease}
 .feed-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .feed-toggle .emoji{font-size:14px}
-.rss-col .rss-item{display:none}
-.rss-col.expanded .rss-item{display:block}
+/* 逐源分组 RSS：2 列网格，每组默认展示前 5 条，超出折叠 */
+.rss-feeds-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.feed-group{margin:0;padding:14px;border:1px solid var(--line-subtle);border-radius:13px;background:rgba(7,17,31,.28)}
+.feed-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--line-subtle)}
+.feed-name{font-size:var(--fs-h3);font-weight:600;color:var(--accent)}
+.feed-count{font-size:var(--fs-small);color:var(--text-secondary);font-family:var(--font-mono)}
+.feed-items{display:flex;flex-direction:column}
+.feed-more[hidden]{display:none}
 
 /* F3：原始出处引用卡（展开证据链时展示信源原文，与上层转述结论明显区分） */
 .src-quote{margin:2px 0 12px;padding:10px 12px 11px 13px;border-left:3px solid var(--border-subtle, rgba(255,255,255,.10));
@@ -362,10 +368,7 @@ a{color:var(--accent);text-decoration:none}
 .rss-head h2{font-size:var(--fs-h2);font-weight:600}
 .rss-summary{font-size:var(--fs-small);color:var(--text-secondary);margin-bottom:var(--space-5)}
 .rss-summary::before{content:"▸ ";color:var(--accent)}
-.rss-dual{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5)}
-.rss-col{background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-5);min-height:420px}
-.rss-col-head{display:flex;align-items:center;gap:8px;font-size:var(--fs-h3);font-weight:600;color:var(--text-primary);padding-bottom:var(--space-3);margin-bottom:var(--space-3);border-bottom:1px solid var(--border-subtle)}
-.rss-col-head .emoji{font-size:16px}
+/* 旧等宽双栏结构已移除，替换为 .rss-feeds-grid + .feed-group（见 RSS 预览折叠区） */
 .rss-item{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--border-subtle);transition:border-color .16s}
 .rss-item:last-child{border-bottom:none}
 .rss-item:hover{border-color:var(--border-accent)}
@@ -521,8 +524,7 @@ a{color:var(--accent);text-decoration:none}
   .report-section{padding:var(--space-4)}
   .sec-grid{grid-template-columns:1fr}
   .evidence-list{grid-template-columns:1fr}
-  .rss-dual{grid-template-columns:1fr}
-  .rss-col{min-height:auto}
+  .rss-feeds-grid{grid-template-columns:1fr}
   .drawer{width:92vw}
   /* 手机端 hero 焦点词下划线收细，避免长词折行后下划线过粗 */
   .hero-judgment .kw-apple{border-bottom-width:1.5px}
@@ -756,7 +758,7 @@ body{
 .badge.cat-insight,.badge.cat-analysis,.badge.cat-regular{
   background:transparent;
 }
-.rss-col{background:rgba(8,23,41,.56);border-color:rgba(144,174,210,.12)}
+.feed-group{background:rgba(8,23,41,.56);border-color:rgba(144,174,210,.12)}
 .rss-item{border-bottom-color:rgba(144,174,210,.10)}
 
 .emoji-badge{
@@ -1308,114 +1310,452 @@ body{
     <!-- ===================== 6. RSS 更新区（等宽双栏 · R5） ===================== -->
     <section class="rss-wrap" id="rss">
       <header class="rss-head"><span class="emoji-badge"><span class="emoji">🔄</span></span><h2>RSS 更新区</h2></header>
-      <p class="rss-summary">左侧为本次新增采集，右侧为你已订阅源的最新命中；两栏等宽、各自填平，便于横向比对遗漏。</p>
-      <div class="rss-dual">
-        <!-- 左栏：新增更新 -->
-        <div class="rss-col">
-          <div class="rss-col-head"><span class="emoji-badge"><span class="emoji">🔄</span></span>新增更新</div>
-          <button class="feed-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔄</span> 预览本栏更新 · 6</button>
-          <div class="rss-item">
-            <span class="r-time">20:05</span>
-            <div class="r-body">
-              <span class="r-src brand-gold">知乎 · H004</span>
-              <span class="r-title">梁文锋以 360 亿美元身家成 AI 大模型创始人首富，超越 Sam Altman。</span>
-              <span class="r-badge"><span class="badge warning">NEW</span></span>
-            </div>
+      <p class="rss-summary">按信源/关键词逐组归集；每组默认展示前 5 条，点「展开剩余 N 条」查看本组更多命中。</p>
+      <div class="rss-feeds-grid">
+
+        <!-- G1 知乎热榜 -->
+        <div class="feed-group" data-feed-count="7">
+          <div class="feed-header">
+            <div class="feed-name">知乎热榜</div>
+            <div class="feed-count">7 条</div>
           </div>
-          <div class="rss-item">
-            <span class="r-time">19:30</span>
-            <div class="r-body">
-              <span class="r-src brand-apple">@dotey · R019</span>
-              <span class="r-title">Cognition 收购 Windsurf 一周年复盘：团队 44→350 人，收入破 5 亿美元。</span>
-              <span class="r-badge"><span class="badge warning">NEW</span></span>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">20:05</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">知乎 · H004</span>
+                <span class="r-title">梁文锋以 360 亿身家成 AI 大模型创始人首富，超越 Sam Altman。</span>
+                <span class="r-badge"><span class="badge warning">NEW</span></span>
+              </div>
             </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">18:40</span>
-            <div class="r-body">
-              <span class="r-src brand-apple">@jxnlco · R008</span>
-              <span class="r-title">OpenAI 推出 $100 Codex 信用推广，仅限前 10k 用户，推动 GPT-5.6 Sol 采用。</span>
-              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            <div class="rss-item">
+              <span class="r-time">19:42</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">知乎 · R003</span>
+                <span class="r-title">国产大模型推理成本一年降约 70%，行业进入价格战。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
             </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">17:15</span>
-            <div class="r-body">
-              <span class="r-src brand-siemens">@ylecun · R023</span>
-              <span class="r-title">PhotoRoom 开源文本到图像模型 PRX（Apache 2.0），基于欧洲数据管道训练。</span>
-              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            <div class="rss-item">
+              <span class="r-time">19:10</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">知乎 · R006</span>
+                <span class="r-title">AI 简历筛选被裁定就业歧视，多州启动调查。</span>
+                <span class="r-badge"><span class="badge critical">风险</span></span>
+              </div>
             </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">16:20</span>
-            <div class="r-body">
-              <span class="r-src brand-apple">@jxnlco · R005</span>
-              <span class="r-title">GPT-5.6 Sol 已主导开发工作流，用户从 Claude 与 Fable 大规模迁移。</span>
-              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            <div class="rss-item">
+              <span class="r-time">18:30</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">知乎 · R007</span>
+                <span class="r-title">高校开设 AI 审计微专业，首批招生 200 人。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
             </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">15:05</span>
-            <div class="r-body">
-              <span class="r-src brand-siemens">GitHub · R026</span>
-              <span class="r-title">TencentDB-Agent-Memory 登上 GitHub 周热榜，代理记忆管理成开发者热点。</span>
-              <span class="r-badge"><span class="badge warning">NEW</span></span>
+            <div class="rss-item">
+              <span class="r-time">17:55</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">知乎 · R009</span>
+                <span class="r-title">开源社区谴责头部实验室模型权重私有化。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
             </div>
-          </div>
-        </div>
-        <!-- 右栏：订阅更新 -->
-        <div class="rss-col">
-          <div class="rss-col-head"><span class="emoji-badge"><span class="emoji">🔖</span></span>订阅更新</div>
-          <button class="feed-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔖</span> 预览本栏更新 · 6</button>
-          <div class="rss-item">
-            <span class="r-time">20:01</span>
-            <div class="r-body">
-              <span class="r-src brand-gold">@bindureddy · R004</span>
-              <span class="r-title">双模式 AI 范式判断：廉价高性能模型（90% 任务）+ 超智能模型。</span>
-              <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">17:20</span>
+                <div class="r-body">
+                  <span class="r-src brand-gold">知乎 · R010</span>
+                  <span class="r-title">工信部发布大模型备案新规征求意见稿。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
+              <div class="rss-item">
+                <span class="r-time">16:40</span>
+                <div class="r-body">
+                  <span class="r-src brand-gold">知乎 · R014</span>
+                  <span class="r-title">知乎 AI 话题日均新增讨论破 12 万。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">19:10</span>
-            <div class="r-body">
-              <span class="r-src brand-gold">@gdb · R020</span>
-              <span class="r-title">ChatGPT Work + Sol 让用户随时查业务深度问题，降低复杂问题门槛。</span>
-              <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
-            </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">18:25</span>
-            <div class="r-body">
-              <span class="r-src brand-gold">@elonmusk · R015</span>
-              <span class="r-title">推荐 Grok 4.5，暗示该版本性能值得尝试。</span>
-              <span class="r-badge"><span class="badge cat-regular">常规</span></span>
-            </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">17:40</span>
-            <div class="r-body">
-              <span class="r-src brand-siemens">@ylecun · R027</span>
-              <span class="r-title">VISReg 自监督学习新方向，越域泛化超越 MoCov3 与 DINOv2。</span>
-              <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
-            </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">16:55</span>
-            <div class="r-body">
-              <span class="r-src brand-siemens">@shao__meng · R021</span>
-              <span class="r-title">TRAE Work 官方知识库：40 万字实战教程 + 7 大场景工作流。</span>
-              <span class="r-badge"><span class="badge cat-regular">常规</span></span>
-            </div>
-          </div>
-          <div class="rss-item">
-            <span class="r-time">15:50</span>
-            <div class="r-body">
-              <span class="r-src brand-gold">@bindureddy · R012</span>
-              <span class="r-title">开源 AI 数月内或占至少 20% 工作负载，GLM 与 Kimi 已接近可用。</span>
-              <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
-            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 2 条</button>
           </div>
         </div>
+
+        <!-- G2 @jxnlco -->
+        <div class="feed-group" data-feed-count="6">
+          <div class="feed-header">
+            <div class="feed-name">@jxnlco</div>
+            <div class="feed-count">6 条</div>
+          </div>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">20:02</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@jxnlco · R005</span>
+                <span class="r-title">GPT-5.6 Sol 已主导开发工作流，用户从 Claude 与 Fable 大规模迁移。</span>
+                <span class="r-badge"><span class="badge warning">NEW</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">19:28</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@jxnlco · R008</span>
+                <span class="r-title">OpenAI 推出 $100 Codex 信用推广，仅限前 10k 用户。</span>
+                <span class="r-badge"><span class="badge warning">NEW</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:50</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@jxnlco · R011</span>
+                <span class="r-title">custom agents.md 锁定 GPT-5.6 Sol 于 stage-0 八小时，被指注入风险。</span>
+                <span class="r-badge"><span class="badge critical">风险</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:10</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@jxnlco · R013</span>
+                <span class="r-title">jxnlco 演示 agents.md 多智能体编排模板。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:30</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@jxnlco · R016</span>
+                <span class="r-title">开发者反馈 Sol 长上下文缓存成本下降约 40%。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">16:45</span>
+                <div class="r-body">
+                  <span class="r-src brand-apple">@jxnlco · R017</span>
+                  <span class="r-title">Sol API 新增流式思考可视化端点。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 1 条</button>
+          </div>
+        </div>
+
+        <!-- G3 @dotey -->
+        <div class="feed-group" data-feed-count="6">
+          <div class="feed-header">
+            <div class="feed-name">@dotey</div>
+            <div class="feed-count">6 条</div>
+          </div>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">20:00</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@dotey · R019</span>
+                <span class="r-title">Cognition 收购 Windsurf 一周年复盘：团队 44→350 人，收入破 5 亿。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">19:20</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@dotey · R018</span>
+                <span class="r-title">中文 prompt 工程范式转移：从指令到约束。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:35</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@dotey · R024</span>
+                <span class="r-title">AI 字幕组商业化，单月订阅破 10 万。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:50</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@dotey · R022</span>
+                <span class="r-title">dotey 转发开源评测基准，质疑榜单刷分。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:05</span>
+              <div class="r-body">
+                <span class="r-src brand-apple">@dotey · R025</span>
+                <span class="r-title">中文社区发起「去 AI 味」写作公约。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">16:20</span>
+                <div class="r-body">
+                  <span class="r-src brand-apple">@dotey · R012</span>
+                  <span class="r-title">模型安全红队招聘薪资同比上涨 35%。</span>
+                  <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 1 条</button>
+          </div>
+        </div>
+
+        <!-- G4 @ylecun -->
+        <div class="feed-group" data-feed-count="6">
+          <div class="feed-header">
+            <div class="feed-name">@ylecun</div>
+            <div class="feed-count">6 条</div>
+          </div>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">19:58</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">@ylecun · R023</span>
+                <span class="r-title">PhotoRoom 开源文本到图像模型 PRX（Apache 2.0），基于欧洲数据管道训练。</span>
+                <span class="r-badge"><span class="badge warning">NEW</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">19:15</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">@ylecun · R027</span>
+                <span class="r-title">VISReg 自监督学习新方向，越域泛化超越 MoCov3 与 DINOv2。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:25</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">@ylecun · R020</span>
+                <span class="r-title">欧洲数据主权立场：呼吁本土训练集群去美化。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:40</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">@ylecun · R015</span>
+                <span class="r-title">PRX 模型权重将在 HuggingFace 开放下载。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">16:55</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">@ylecun · R021</span>
+                <span class="r-title">Yann 批评「规模即智能」叙事，主张世界模型。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">16:10</span>
+                <div class="r-body">
+                  <span class="r-src brand-siemens">@ylecun · R026</span>
+                  <span class="r-title">欧洲联合实验室发布多语言评测集。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 1 条</button>
+          </div>
+        </div>
+
+        <!-- G5 GitHub 周热榜 -->
+        <div class="feed-group" data-feed-count="7">
+          <div class="feed-header">
+            <div class="feed-name">GitHub 周热榜</div>
+            <div class="feed-count">7 条</div>
+          </div>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">19:55</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">GitHub · R026</span>
+                <span class="r-title">TencentDB-Agent-Memory 登上 GitHub 周热榜，代理记忆管理成开发者热点。</span>
+                <span class="r-badge"><span class="badge warning">NEW</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">19:12</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">GitHub · R012</span>
+                <span class="r-title">轻量本地推理框架 star 破万。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:20</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">GitHub · R013</span>
+                <span class="r-title">RAG 评估基准更新，新增多跳推理子集。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:35</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">GitHub · R016</span>
+                <span class="r-title">vLLM 0.7 发布，吞吐提升 1.8 倍。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">16:50</span>
+              <div class="r-body">
+                <span class="r-src brand-siemens">GitHub · R024</span>
+                <span class="r-title">开源 Agent 框架周新增 300+ 仓库。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">16:05</span>
+                <div class="r-body">
+                  <span class="r-src brand-siemens">GitHub · R010</span>
+                  <span class="r-title">模型量化工具 chainqq 进入 GitHub Trending。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
+              <div class="rss-item">
+                <span class="r-time">15:30</span>
+                <div class="r-body">
+                  <span class="r-src brand-siemens">GitHub · R009</span>
+                  <span class="r-title">端侧推理示例仓库周 star 增长 220%。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 2 条</button>
+          </div>
+        </div>
+
+        <!-- G6 @bindureddy / @gdb -->
+        <div class="feed-group" data-feed-count="6">
+          <div class="feed-header">
+            <div class="feed-name">@bindureddy / @gdb</div>
+            <div class="feed-count">6 条</div>
+          </div>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">19:50</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@bindureddy · R004</span>
+                <span class="r-title">双模式 AI 范式判断：廉价高性能模型（90% 任务）+ 超智能模型。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">19:05</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@gdb · R020</span>
+                <span class="r-title">ChatGPT Work + Sol 让用户随时查业务深度问题，降低门槛。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:15</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@bindureddy · R012</span>
+                <span class="r-title">推理成本下降使中小团队可用前沿模型。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:25</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@gdb · R015</span>
+                <span class="r-title">端侧小模型在隐私场景替代云 API。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">16:35</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@bindureddy · R022</span>
+                <span class="r-title">评测显示 GPT-5.6 Sol 在代码任务领先 12%。</span>
+                <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+              </div>
+            </div>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">15:50</span>
+                <div class="r-body">
+                  <span class="r-src brand-gold">@bindureddy · R025</span>
+                  <span class="r-title">多智能体协作框架开源，首日破千 star。</span>
+                  <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 1 条</button>
+          </div>
+        </div>
+
+        <!-- G7 @elonmusk / @shao__meng / 其他 -->
+        <div class="feed-group" data-feed-count="6">
+          <div class="feed-header">
+            <div class="feed-name">@elonmusk / @shao__meng / 其他</div>
+            <div class="feed-count">6 条</div>
+          </div>
+          <div class="feed-items">
+            <div class="rss-item">
+              <span class="r-time">19:45</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@elonmusk · R015</span>
+                <span class="r-title">推荐 Grok 4.5，暗示该版本性能值得尝试。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">19:00</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">@shao__meng · R021</span>
+                <span class="r-title">TRAE Work 官方知识库：40 万字实战教程 + 7 大场景工作流。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">18:05</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">其他 · R006</span>
+                <span class="r-title">anti-slop agents.md 被指高比例 AI 生成，存在超稳态化风险。</span>
+                <span class="r-badge"><span class="badge critical">风险</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">17:15</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">其他 · R009</span>
+                <span class="r-title">社区讨论「如何识别模型生成内容」指南。</span>
+                <span class="r-badge"><span class="badge cat-insight">洞察</span></span>
+              </div>
+            </div>
+            <div class="rss-item">
+              <span class="r-time">16:25</span>
+              <div class="r-body">
+                <span class="r-src brand-gold">其他 · R017</span>
+                <span class="r-title">多平台联合发起内容溯源标签试点。</span>
+                <span class="r-badge"><span class="badge cat-regular">常规</span></span>
+              </div>
+            </div>
+            <div class="feed-more" hidden>
+              <div class="rss-item">
+                <span class="r-time">15:40</span>
+                <div class="r-body">
+                  <span class="r-src brand-gold">其他 · R018</span>
+                  <span class="r-title">开源评测显示 Grok 4.5 数学推理进步显著。</span>
+                  <span class="r-badge"><span class="badge cat-analysis">分析</span></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="feed-toggle" data-feed-toggle aria-expanded="false"><span class="chev">▸</span>展开剩余 1 条</button>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -1570,14 +1910,16 @@ body{
       }
     });
   });
-  /* RSS 预览折叠（点击 feed-toggle 展开/收起本栏更新；默认收起） */
-  document.querySelectorAll('.feed-toggle').forEach(function(btn){
+  /* RSS 逐源分组折叠：点击 feed-toggle 展开/收起本组剩余条目（默认收起）；与 evidence-toggle 同交互范式 */
+  document.querySelectorAll('.feed-group .feed-toggle').forEach(function(btn){
     btn.addEventListener('click', function(){
-      var col = btn.closest('.rss-col');
-      if(col){
-        var expanded = col.classList.toggle('expanded');
-        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      }
+      var group = btn.closest('.feed-group');
+      if(!group) return;
+      var more = group.querySelector('.feed-more');
+      if(!more) return;
+      var open = more.hasAttribute('hidden');
+      if(open){ more.removeAttribute('hidden'); } else { more.setAttribute('hidden',''); }
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   });
   document.querySelectorAll('.report-section .sec-grid .news-card').forEach(function(card){

@@ -2,7 +2,7 @@
 
 > 状态：**V4 + V4.1 已上线并通过一次付费验收。** 生产 `v2-beta-v4-rc-20260716`（NAS `sha256:c0262e75…`，代码 `01264222`）。验证页 `/html/2026-07-16/00-25.html`。
 >
-> 权威视觉原型：[`../prototypes/2026-07-15-xjiankong-report-v4-editorial.html`](../prototypes/2026-07-15-xjiankong-report-v4-editorial.html)。原型仅用于视觉和结构裁定，不得直接复制其中的模拟新闻、固定统计或来源编号进入生产。
+> 权威视觉原型：[`../prototypes/2026-07-15-xjiankong-report-v4-editorial.html`](../prototypes/2026-07-15-xjiankong-report-v4-editorial.html)。原型仅用于视觉和结构裁定，不得直接复制其中的模拟新闻、固定统计或来源编号进入生产。**2026-07-16 老板裁定：** 原型已去除 V3 残留的 Hero 彩虹字与青绿山水底，对齐「深空蓝 + 单一亮蓝、不用彩虹数字」；证据折叠 / suite / 大厂点状色保留。
 
 ## 一、目标
 

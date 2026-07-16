@@ -1,17 +1,12 @@
 <!DOCTYPE html>
 <!--
-  设计系统：Xjiankong AI 情报报告页 · 重构原型
-  消费令牌：2026-07-15-xjiankong-redesign-design-tokens.md（DESIGN.md）
-  基底：Linear 低饱和面板结构 × v2-beta 深空蓝底色 × 墨青/深紫/青灰跨色系渐变
-  三处已裁定偏离：① 左侧细导航轨 240px（非内容栏）② emoji 作板块主图标（saturate .82, ≤18px）③ section-01 渲染为 hero 论证支撑
-  裁定④（本次增量）：大厂主题色强调板（§2.9）+ 三类高亮语义（§2.10 key-highlight / evidence-strong / reference-highlight）
-    —— 仅作点状语义锚点：每屏强色标记 ≤3 处、不均等层次、小红书红仅点状未铺面、不替代 §2.7 状态色。
-  密度纪律（审查回修后）：reference-highlight 仅保留「ev-strong 卡内来源 + 每节唯一权威来源」，其余 [R-xx] 回退中性灰蓝胶囊；
-    RSS 信源名（handle）按 §2.10-c 保留大厂色（独立更新区，不计入章节屏强色）。
-  本文件为独立原型，不部署、不修改 NAS 生产环境、不触碰 v2-beta 线上文件。
-  增量微调（2026-07-15 第二轮）：① 顶栏指标字体明显化（.metric-value 亮色+字重+微光 / .metric-label 次级灰）；
-    ② emoji 亮色系圆形徽章（.emoji-badge）包裹所有板块/章节标题前 emoji；  ③ 全站占位内容替换为 trend.shankluo.cc 真实新闻（3 核心判断 + 8 章节 + RSS 双栏）。
-  增量微调（2026-07-15 第三轮 V3）：① F1 hero 指标彩虹装饰带（仅 hero，去原 text-shadow 怪光）② F3 body 背景切青绿山水渐变（绿主导，墨青绿/石绿为主角，蓝仅末端远山点缀）③ F2 证据链默认收起、点击 toggle / 结论卡展开（grid-rows 0fr→1fr 折叠）。
+  设计系统：Xjiankong AI 情报报告页 · V4 编辑型权威视觉原型
+  规格：docs/superpowers/specs/2026-07-15-v4-editorial-report-ui-design.md
+  基底：v2-beta 深空蓝 / 青灰 / 近白 / 单一亮蓝（#0ea5e9）；点状大厂色仅限信源/证据锚点。
+  结构：.judgment-suite（Hero 总览 + 01 证据层）· J1–J3 映射 · 证据默认折叠 · RSS 预览折叠。
+  本文件为独立原型，不部署、不修改 NAS 生产；模拟新闻不得写回生产。
+  2026-07-16 老板裁定：去除 V3 残留 —— ① 删除 Hero --rainbow 彩虹字 ② 删除 --bg-gradient-v3 青绿山水底；
+    body 改回深空蓝渐变 + 低饱和角光。证据折叠 / 大厂点状色 / suite 结构保留。
 -->
 <html lang="zh-CN">
 <head>
@@ -36,24 +31,15 @@
   --text-tertiary:#6c7f99;
   --accent-legacy:#75b2ff;
 
-  /* 强调（老板指定 #0369a1 / #0ea5e9） */
+  /* 强调：单一亮蓝（规格：不用彩虹数字） */
   --accent-deep:#0369a1;
   --accent:#0ea5e9;
 
-  /* F1：Hero 彩虹装饰带（仅 hero 指标使用，不计入强色配额） */
-  --rainbow:linear-gradient(90deg, #ff5b5b 0%, #f0a868 16%, #f5d76e 33%, #7fc9a0 50%, #5fd0d0 66%, #6aa8ff 83%, #b48cff 100%);
-
-  /* R4 跨色系低饱和渐变 + 角光（旧 v2-beta 蓝系，保留作兼容参考，不再用于 body） */
+  /* 深空蓝底 + 低饱和角光（无青绿山水、无彩虹） */
   --bg-gradient:linear-gradient(160deg,#07111f 0%,#0a1729 42%,#0c1c33 100%);
-  --bg-glow-ink:radial-gradient(120% 80% at 10% -5%,rgba(26,102,110,.30) 0%,rgba(7,17,31,0) 58%);
-  --bg-glow-violet:radial-gradient(90% 70% at 94% 4%,rgba(75,63,115,.26) 0%,rgba(7,17,31,0) 55%);
-  --bg-glow-slate:radial-gradient(100% 60% at 50% 102%,rgba(40,58,82,.28) 0%,rgba(7,17,31,0) 60%);
-
-  /* F3：V3 青绿山水背景（绿主导，墨青绿/石绿为主角，蓝仅末端远山黛青点缀；深色低噪） */
-  --bg-gradient-v3:linear-gradient(158deg, #07111f 0%, #0c2a2e 30%, #16342d 58%, #1a2b3a 100%);
-  --bg-glow-1:radial-gradient(105% 78% at 6% 8%, rgba(28,110,100,.30) 0%, rgba(7,17,31,0) 60%);
-  --bg-glow-2:radial-gradient(100% 72% at 92% 98%, rgba(22,80,66,.22) 0%, rgba(7,17,31,0) 62%);
-  --bg-glow-3:radial-gradient(90% 58% at 80% 100%, rgba(201,162,39,.14) 0%, rgba(7,17,31,0) 62%);
+  --bg-glow-1:radial-gradient(120% 80% at 10% -5%,rgba(14,165,233,.14) 0%,rgba(7,17,31,0) 58%);
+  --bg-glow-2:radial-gradient(90% 70% at 94% 4%,rgba(75,63,115,.18) 0%,rgba(7,17,31,0) 55%);
+  --bg-glow-3:radial-gradient(100% 60% at 50% 102%,rgba(40,58,82,.28) 0%,rgba(7,17,31,0) 60%);
 
   /* 面板 / 边框 */
   --panel-1:rgba(17,39,70,.82);
@@ -127,8 +113,8 @@ body{
   line-height:1.70;
   color:var(--text-primary);
   background:var(--bg-base);
-  /* R4：跨色系低饱和渐变 + 三层角光建立存在感 */
-  background-image:var(--bg-glow-1),var(--bg-glow-2),var(--bg-glow-3),var(--bg-gradient-v3);
+  /* 深空蓝渐变 + 三层低饱和角光（对齐 V4 规格） */
+  background-image:var(--bg-glow-1),var(--bg-glow-2),var(--bg-glow-3),var(--bg-gradient);
   background-attachment:fixed;
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
@@ -250,14 +236,10 @@ a{color:var(--accent);text-decoration:none}
   padding:14px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)}
 .metric{display:flex;flex-direction:column;gap:3px}
 
-/* 顶栏指标字体明显化（增量微调：深底上数字/主值一眼可读，数字比标签更亮、字重更高，整体对比度提升但不刺眼） */
+/* 指标：近白主值；Hero 可有且仅有一个亮蓝强调（规格 §二.5） */
 .metric-value{color:#e2e8f0;font-weight:600;font-family:var(--font-mono);font-size:15px}
-/* F1：hero 指标套彩虹渐变（仅 .hero-metrics .metric-value，透明填充文字；去掉原 text-shadow 怪光） */
-.hero-metrics .metric-value{
-  background:var(--rainbow);
-  -webkit-background-clip:text; background-clip:text;
-  color:transparent; -webkit-text-fill-color:transparent;
-}
+.hero-metrics .metric-value{color:var(--text-primary);-webkit-text-fill-color:unset;background:none}
+.hero-metrics .metric:first-child .metric-value{color:var(--accent)}
 .metric-label{color:#94a3b8;font-weight:500;font-size:var(--fs-micro);letter-spacing:.04em}
 .hero-chips{display:flex;flex-wrap:wrap;gap:10px}
 /* 分散式一句话总结（准则 B） */
@@ -1425,8 +1407,8 @@ body{
 
 <!-- ===================== FOOTER ===================== -->
 <footer class="site-footer">
-  <span><span class="emoji-badge"><span class="emoji">📡</span></span> 热点新闻分析 · 重构原型 v2026-07-15</span>
-  <span>本页为设计原型，不部署、不修改生产环境 · 数据来自 trend.shankluo.cc 线上公网报告（2026-07-15）</span>
+  <span><span class="emoji-badge"><span class="emoji">📡</span></span> 热点新闻分析 · V4 编辑型权威原型（已去彩虹/青绿 · 2026-07-16）</span>
+  <span>本页为设计原型，不部署、不修改生产环境 · 结构对齐 V4.1；模拟数据勿写入生产</span>
 </footer>
 
 <!-- ===================== 5. HISTORY DRAWER（右侧浮层） ===================== -->

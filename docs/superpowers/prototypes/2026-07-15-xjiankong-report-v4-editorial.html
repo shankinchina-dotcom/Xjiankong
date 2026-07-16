@@ -309,6 +309,21 @@ a{color:var(--accent);text-decoration:none}
 .ev-wrap > .ev-inner{min-height:0;overflow:hidden}
 .report-section.expanded .ev-wrap{grid-template-rows:1fr}
 
+/* RSS 预览折叠（默认收起，点击 feed-toggle 展开；与 evidence-toggle 同交互范式） */
+.feed-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  height:28px;padding:0 12px;margin:4px 0 10px;
+  background:var(--panel-2);border:1px solid var(--border-subtle);border-radius:var(--radius-pill);
+  color:var(--text-secondary);font-family:var(--font-ui);font-size:var(--fs-small);line-height:1;
+  cursor:pointer;transition:border-color .18s,color .18s,background .18s;
+}
+.feed-toggle:hover{border-color:var(--border-accent);color:var(--text-primary);background:var(--panel-hover)}
+.feed-toggle .chev{display:inline-block;font-size:11px;line-height:1;transition:transform .28s ease}
+.feed-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.feed-toggle .emoji{font-size:14px}
+.rss-col .rss-item{display:none}
+.rss-col.expanded .rss-item{display:block}
+
 /* F3：原始出处引用卡（展开证据链时展示信源原文，与上层转述结论明显区分） */
 .src-quote{margin:2px 0 12px;padding:10px 12px 11px 13px;border-left:3px solid var(--border-subtle, rgba(255,255,255,.10));
   background:rgba(255,255,255,.04);border-radius:0 var(--radius-md) var(--radius-md) 0;
@@ -1298,6 +1313,7 @@ body{
         <!-- 左栏：新增更新 -->
         <div class="rss-col">
           <div class="rss-col-head"><span class="emoji-badge"><span class="emoji">🔄</span></span>新增更新</div>
+          <button class="feed-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔄</span> 预览本栏更新 · 6</button>
           <div class="rss-item">
             <span class="r-time">20:05</span>
             <div class="r-body">
@@ -1350,6 +1366,7 @@ body{
         <!-- 右栏：订阅更新 -->
         <div class="rss-col">
           <div class="rss-col-head"><span class="emoji-badge"><span class="emoji">🔖</span></span>订阅更新</div>
+          <button class="feed-toggle" aria-expanded="false"><span class="chev">▸</span><span class="emoji">🔖</span> 预览本栏更新 · 6</button>
           <div class="rss-item">
             <span class="r-time">20:01</span>
             <div class="r-body">
@@ -1549,6 +1566,16 @@ body{
       var section = btn.closest('.report-section');
       if(section){
         var expanded = section.classList.toggle('expanded');
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      }
+    });
+  });
+  /* RSS 预览折叠（点击 feed-toggle 展开/收起本栏更新；默认收起） */
+  document.querySelectorAll('.feed-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var col = btn.closest('.rss-col');
+      if(col){
+        var expanded = col.classList.toggle('expanded');
         btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       }
     });
